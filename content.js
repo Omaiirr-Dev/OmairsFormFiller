@@ -209,13 +209,13 @@ async function fillForm(recordedActions) {
         continue;
       }
 
-      // Scroll to element
+      // Scroll to element smoothly
       el.scrollIntoView({ behavior: 'smooth', block: 'center' });
-      await sleep(300);
-
-      // Flash highlight
-      flashElement(el);
       await sleep(200);
+
+      // Single clean flash
+      flashElement(el);
+      await sleep(150);
 
       // Perform action
       if (action.type === 'input') {
@@ -242,7 +242,7 @@ async function fillForm(recordedActions) {
         el.dispatchEvent(new Event('change', { bubbles: true }));
       }
 
-      await sleep(400);
+      await sleep(250);
 
     } catch (err) {
       console.error('Error replaying action:', err);
@@ -260,7 +260,7 @@ function sleep(ms) {
 function flashElement(el) {
   const original = el.style.outline;
   el.style.outline = '3px solid #6366f1';
-  setTimeout(() => el.style.outline = original, 500);
+  setTimeout(() => el.style.outline = original, 350);
 }
 
 function showNotification(text, color) {
