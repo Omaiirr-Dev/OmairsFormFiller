@@ -233,12 +233,16 @@ async function fillForm(recordedActions) {
       }
       else if (action.type === 'change') {
         if (el.tagName === 'SELECT') {
+          // Set both value and index for compatibility
+          el.value = action.value;
           el.selectedIndex = action.selectedIndex;
         } else if (el.type === 'checkbox' || el.type === 'radio') {
           el.checked = action.checked;
         } else {
           el.value = action.value;
         }
+        // Dispatch both input and change for framework compatibility
+        el.dispatchEvent(new Event('input', { bubbles: true }));
         el.dispatchEvent(new Event('change', { bubbles: true }));
       }
 
