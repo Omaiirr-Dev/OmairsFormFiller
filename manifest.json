@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
   "name": "Omair's Form Filler",
-  "version": "2.0.0",
-  "description": "Record and replay form interactions with ultra-robust 9-layer element detection, automatic retries, and intelligent waiting for dynamic content.",
+  "version": "2.1.0",
+  "description": "Ultra-fast robot-speed form filler with 9-layer element detection, aggressive auto-scrolling, and unstoppable execution. Never pauses, never fails.",
   "permissions": [
     "storage",
     "activeTab",

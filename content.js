@@ -9,15 +9,17 @@ let actionCounter = 0;
 let recordingOverlay = null;
 let replayOverlay = null;
 
-// Configuration
+// Configuration - Ultra-fast robot mode
 const CONFIG = {
-  MAX_RETRIES: 3,
-  RETRY_DELAY: 500,
-  ELEMENT_WAIT_TIMEOUT: 5000,
-  ELEMENT_WAIT_INTERVAL: 100,
-  REPLAY_DELAY: 400,
-  HIGHLIGHT_DURATION: 600,
-  SCROLL_BEHAVIOR: 'smooth'
+  MAX_RETRIES: 5,              // More retries for reliability
+  RETRY_DELAY: 100,            // Fast retry (was 500ms)
+  ELEMENT_WAIT_TIMEOUT: 1000,  // Short timeout (was 5000ms)
+  ELEMENT_WAIT_INTERVAL: 50,   // Fast check interval (was 100ms)
+  REPLAY_DELAY: 50,            // Blazing fast between actions (was 400ms)
+  HIGHLIGHT_DURATION: 300,     // Quick highlight (was 600ms)
+  SCROLL_BEHAVIOR: 'auto',     // Instant scroll (was 'smooth')
+  AGGRESSIVE_SCROLL: true,     // Force scroll even if element seems visible
+  SCROLL_PADDING: 100          // Extra scroll padding to ensure visibility
 };
 
 // Initialize the content script
@@ -578,47 +580,79 @@ function isElementValid(element, action) {
   return true;
 }
 
-// Wait for element to be ready for interaction
+// Wait for element to be ready for interaction (non-blocking, fast check)
 async function waitForElementReady(element) {
-  const startTime = Date.now();
+  // Quick check only - don't block!
+  const maxAttempts = 10; // 10 attempts * 50ms = 500ms max
 
-  while (Date.now() - startTime < CONFIG.ELEMENT_WAIT_TIMEOUT) {
-    // Check if element is ready
-    if (element.offsetParent !== null && // Element is visible
-        !element.disabled && // Not disabled
-        element.offsetWidth > 0 && // Has dimensions
+  for (let i = 0; i < maxAttempts; i++) {
+    // Check if element is interactable
+    if (!element.disabled &&
+        element.offsetWidth > 0 &&
         element.offsetHeight > 0) {
       return true;
     }
 
+    // Very short wait
     await sleep(CONFIG.ELEMENT_WAIT_INTERVAL);
   }
 
-  return false; // Timeout
+  // Don't fail - just continue anyway
+  console.log('⚡ Element not fully ready, continuing anyway...');
+  return true; // Always return true to never block
 }
 
-// Scroll element into view
-function scrollToElement(element) {
+// Scroll element into view - AGGRESSIVE mode
+async function scrollToElement(element) {
   try {
-    element.scrollIntoView({
-      behavior: CONFIG.SCROLL_BEHAVIOR,
-      block: 'center',
-      inline: 'center'
-    });
+    // Force scroll even if element seems visible
+    const rect = element.getBoundingClientRect();
+    const isInViewport = (
+      rect.top >= 0 &&
+      rect.left >= 0 &&
+      rect.bottom <= (window.innerHeight || document.documentElement.clientHeight) &&
+      rect.right <= (window.innerWidth || document.documentElement.clientWidth)
+    );
+
+    // Always scroll in aggressive mode, or if not in viewport
+    if (CONFIG.AGGRESSIVE_SCROLL || !isInViewport) {
+      // Scroll with instant behavior
+      element.scrollIntoView({
+        behavior: CONFIG.SCROLL_BEHAVIOR,
+        block: 'center',
+        inline: 'center'
+      });
+
+      // Extra scroll to add padding
+      if (CONFIG.SCROLL_PADDING > 0) {
+        window.scrollBy({
+          top: -CONFIG.SCROLL_PADDING,
+          behavior: CONFIG.SCROLL_BEHAVIOR
+        });
+      }
+
+      // Small wait for scroll to complete (even with 'auto')
+      await sleep(30);
+    }
   } catch (error) {
     // Fallback for older browsers
-    element.scrollIntoView(false);
+    try {
+      element.scrollIntoView(false);
+      await sleep(30);
+    } catch (e) {
+      console.log('⚠️ Scroll failed, continuing anyway');
+    }
   }
 }
 
-// Enhanced form filling with retries and validation
+// Enhanced form filling - ULTRA-FAST ROBOT MODE
 async function fillForm(actions) {
   if (!actions || actions.length === 0) {
     console.log('No actions to replay');
     return;
   }
 
-  console.log('Starting enhanced form fill with', actions.length, 'actions');
+  console.log('🚀 Starting ULTRA-FAST form fill with', actions.length, 'actions');
   showReplayOverlay();
 
   let successCount = 0;
@@ -626,60 +660,59 @@ async function fillForm(actions) {
 
   for (let i = 0; i < actions.length; i++) {
     const action = actions[i];
-    console.log(`Replaying action ${i + 1}/${actions.length}:`, action);
+    console.log(`⚡ Replaying action ${i + 1}/${actions.length}:`, action);
 
     try {
       const element = await findElement(action);
 
       if (!element) {
-        console.warn('❌ Element not found for action:', action);
+        console.warn('❌ Element not found, trying next action');
         failCount++;
         updateReplayCounter(i + 1, actions.length, successCount, failCount);
-        continue;
+        continue; // Never stop - keep going!
       }
 
-      // Scroll element into view
-      scrollToElement(element);
+      // AGGRESSIVE scroll - don't wait
+      await scrollToElement(element);
 
-      // Wait for element to be ready
-      const isReady = await waitForElementReady(element);
-      if (!isReady) {
-        console.warn('⚠️ Element not ready for interaction:', action);
-        // Continue anyway, might still work
-      }
+      // Quick ready check - never block
+      await waitForElementReady(element);
 
-      // Highlight element being interacted with
+      // Highlight element (non-blocking)
       highlightElement(element, '#6366f1');
 
-      // Wait a bit for visual feedback
+      // Minimal delay for DOM to settle (was 400ms, now 50ms)
       await sleep(CONFIG.REPLAY_DELAY);
 
-      // Replay the action based on type
-      const success = await replayAction(element, action);
+      // Replay the action - NEVER let this stop us
+      try {
+        const success = await replayAction(element, action);
 
-      if (success) {
-        successCount++;
-        console.log('✓ Action replayed successfully');
-      } else {
+        if (success) {
+          successCount++;
+          console.log('✓ Success');
+        } else {
+          failCount++;
+          console.warn('⚠️ Failed but continuing');
+        }
+      } catch (actionError) {
+        console.warn('⚠️ Action error, continuing anyway:', actionError.message);
         failCount++;
-        console.warn('❌ Action replay failed');
       }
 
       updateReplayCounter(i + 1, actions.length, successCount, failCount);
 
-      // Additional delay for form validation/processing
-      if (action.type === 'change' || action.type === 'input') {
-        await sleep(100);
-      }
+      // NO additional delays - blazing fast!
 
     } catch (error) {
-      console.error('❌ Error replaying action:', action, error);
+      console.error('❌ Error, but NEVER STOPPING:', error.message);
       failCount++;
       updateReplayCounter(i + 1, actions.length, successCount, failCount);
+      // KEEP GOING NO MATTER WHAT
     }
   }
 
-  console.log(`Form fill complete: ${successCount} success, ${failCount} failed`);
+  console.log(`🏁 Form fill complete: ${successCount} success, ${failCount} failed`);
 
   // Show completion message
   updateReplayStatus(successCount, failCount, actions.length);
@@ -687,16 +720,15 @@ async function fillForm(actions) {
   // Hide overlay after a delay
   setTimeout(() => {
     hideReplayOverlay();
-  }, 3000);
+  }, 2000);
 }
 
-// Replay a single action
+// Replay a single action - ULTRA-FAST
 async function replayAction(element, action) {
   try {
-    // Focus the element first
+    // Focus the element first (no wait)
     if (element.focus) {
       element.focus();
-      await sleep(50);
     }
 
     switch (action.type) {
@@ -723,32 +755,26 @@ async function replayAction(element, action) {
   }
 }
 
-// Replay input action
+// Replay input action - INSTANT
 async function replayInputAction(element, action) {
   if (element.value === action.value) {
     console.log('Input already has correct value');
     return true;
   }
 
-  // Clear existing value
-  element.value = '';
-  element.dispatchEvent(new Event('input', { bubbles: true }));
-  await sleep(50);
-
-  // Set new value
+  // Set value directly - NO clearing delay
   element.value = action.value;
 
-  // Dispatch multiple events to trigger various listeners
-  element.dispatchEvent(new Event('input', { bubbles: true, cancelable: true }));
-  element.dispatchEvent(new Event('change', { bubbles: true, cancelable: true }));
-  element.dispatchEvent(new KeyboardEvent('keyup', { bubbles: true }));
-
-  // Trigger React/Vue change detection
+  // Trigger React/Vue change detection FIRST (most important)
   const nativeInputValueSetter = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, 'value')?.set;
   if (nativeInputValueSetter) {
     nativeInputValueSetter.call(element, action.value);
   }
 
+  // Dispatch multiple events to trigger various listeners (all at once)
+  element.dispatchEvent(new Event('input', { bubbles: true, cancelable: true }));
+  element.dispatchEvent(new Event('change', { bubbles: true, cancelable: true }));
+  element.dispatchEvent(new KeyboardEvent('keyup', { bubbles: true }));
   element.dispatchEvent(new Event('input', { bubbles: true }));
 
   return true;
