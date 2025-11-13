@@ -59,13 +59,18 @@ function recordClick(e) {
   const el = e.target;
   const selector = getSelector(el);
 
+  // Capture text content for dropdown options
+  const textContent = el.innerText || el.textContent || '';
+  const trimmedText = textContent.trim().substring(0, 100);
+
   actions.push({
     type: 'click',
     selector: selector,
     tagName: el.tagName,
     inputType: el.type,
     checked: el.checked,
-    text: el.innerText?.substring(0, 50)
+    text: trimmedText,
+    value: el.value || trimmedText  // Use text as value for custom dropdowns
   });
 
   flashElement(el);
@@ -115,12 +120,19 @@ function recordChange(e) {
   const el = e.target;
   const selector = getSelector(el);
 
+  // For SELECT elements, also capture the selected option text
+  let displayText = el.value;
+  if (el.tagName === 'SELECT' && el.selectedIndex >= 0 && el.options[el.selectedIndex]) {
+    displayText = el.options[el.selectedIndex].text;
+  }
+
   actions.push({
     type: 'change',
     selector: selector,
     tagName: el.tagName,
     inputType: el.type,
     value: el.value,
+    displayText: displayText,  // Text content of selected option
     checked: el.checked,
     selectedIndex: el.selectedIndex
   });
@@ -128,62 +140,49 @@ function recordChange(e) {
   flashElement(el);
 }
 
-// Get unique selector for element - IMPROVED
+// Get unique selector for element - SIMPLIFIED like working form fillers
 function getSelector(el) {
   // Try ID first (most reliable)
   if (el.id) return `#${el.id}`;
 
-  // Try name with proper positioning
-  if (el.name) {
+  // Try name for form inputs
+  if (el.name && (el.tagName === 'INPUT' || el.tagName === 'SELECT' || el.tagName === 'TEXTAREA')) {
     let sel = `${el.tagName.toLowerCase()}[name="${el.name}"]`;
     if (el.type) sel += `[type="${el.type}"]`;
 
-    // Check if multiple elements match this selector
     const matches = document.querySelectorAll(sel);
     if (matches.length > 1) {
-      // Find position among matches
       const idx = Array.from(matches).indexOf(el);
-      // Use :nth-child for better uniqueness
       sel = `${sel}:nth-of-type(${idx + 1})`;
     }
     return sel;
   }
 
-  // Build detailed DOM path as fallback
-  return buildDomPath(el);
+  // Build pure nth-child path like working form fillers
+  return buildNthChildPath(el);
 }
 
-// Build detailed DOM path
-function buildDomPath(el) {
+// Build pure nth-child path (like: div:nth-child(5) > div > div > div:nth-child(2) > div)
+function buildNthChildPath(el) {
   const path = [];
   let current = el;
 
-  // Go up to 10 levels for better uniqueness
-  for (let i = 0; i < 10 && current && current.tagName; i++) {
+  // Go up to 12 levels for better uniqueness
+  for (let i = 0; i < 12 && current && current.tagName && current !== document.body; i++) {
     let tag = current.tagName.toLowerCase();
 
-    // Add ID if present
+    // Stop at ID
     if (current.id) {
       path.unshift(`${tag}#${current.id}`);
-      break; // ID is unique, stop here
+      break;
     }
 
-    // Add class if present
-    if (current.className && typeof current.className === 'string') {
-      const classes = current.className.trim().split(/\s+/).slice(0, 2).join('.');
-      if (classes) {
-        tag += `.${classes}`;
-      }
-    }
-
-    // Add position among siblings of same tag
+    // Add nth-child position
     if (current.parentElement) {
-      const siblings = Array.from(current.parentElement.children)
-        .filter(e => e.tagName === current.tagName);
-
+      const siblings = Array.from(current.parentElement.children);
       if (siblings.length > 1) {
         const idx = siblings.indexOf(current) + 1;
-        tag += `:nth-of-type(${idx})`;
+        tag += `:nth-child(${idx})`;
       }
     }
 
@@ -209,13 +208,13 @@ async function fillForm(recordedActions) {
         continue;
       }
 
-      // Scroll to element smoothly
+      // Scroll to element quickly
       el.scrollIntoView({ behavior: 'smooth', block: 'center' });
-      await sleep(200);
+      await sleep(100);
 
-      // Single clean flash
+      // Quick flash
       flashElement(el);
-      await sleep(150);
+      await sleep(80);
 
       // Perform action
       if (action.type === 'input') {
@@ -233,20 +232,39 @@ async function fillForm(recordedActions) {
       }
       else if (action.type === 'change') {
         if (el.tagName === 'SELECT') {
-          // Set both value and index for compatibility
+          // Real select element
           el.value = action.value;
-          el.selectedIndex = action.selectedIndex;
+          if (action.selectedIndex !== undefined) {
+            el.selectedIndex = action.selectedIndex;
+          }
+          el.dispatchEvent(new Event('input', { bubbles: true }));
+          el.dispatchEvent(new Event('change', { bubbles: true }));
         } else if (el.type === 'checkbox' || el.type === 'radio') {
           el.checked = action.checked;
+          el.dispatchEvent(new Event('change', { bubbles: true }));
         } else {
-          el.value = action.value;
+          // Custom dropdown (div-based) - click it and try to select option
+          el.click();
+          await sleep(100);
+
+          // Try to find and click the option with matching text
+          const searchText = action.displayText || action.value;
+          if (searchText) {
+            const option = findOptionByText(el, searchText);
+            if (option) {
+              option.click();
+              await sleep(50);
+            } else {
+              // Fallback: try setting value directly
+              el.value = action.value;
+              el.dispatchEvent(new Event('input', { bubbles: true }));
+              el.dispatchEvent(new Event('change', { bubbles: true }));
+            }
+          }
         }
-        // Dispatch both input and change for framework compatibility
-        el.dispatchEvent(new Event('input', { bubbles: true }));
-        el.dispatchEvent(new Event('change', { bubbles: true }));
       }
 
-      await sleep(250);
+      await sleep(120);
 
     } catch (err) {
       console.error('Error replaying action:', err);
@@ -254,6 +272,30 @@ async function fillForm(recordedActions) {
   }
 
   hideNotification();
+}
+
+// Find dropdown option by text content
+function findOptionByText(dropdownEl, text) {
+  // Look for options in common dropdown patterns
+  const selectors = [
+    '[role="option"]',
+    '[class*="option"]',
+    '[class*="item"]',
+    '[class*="menu-item"]',
+    'li',
+    'div[data-value]'
+  ];
+
+  for (const selector of selectors) {
+    const options = document.querySelectorAll(selector);
+    for (const opt of options) {
+      if (opt.textContent.trim() === text || opt.textContent.includes(text)) {
+        return opt;
+      }
+    }
+  }
+
+  return null;
 }
 
 // Utilities
@@ -264,7 +306,7 @@ function sleep(ms) {
 function flashElement(el) {
   const original = el.style.outline;
   el.style.outline = '3px solid #6366f1';
-  setTimeout(() => el.style.outline = original, 350);
+  setTimeout(() => el.style.outline = original, 250);
 }
 
 function showNotification(text, color) {
