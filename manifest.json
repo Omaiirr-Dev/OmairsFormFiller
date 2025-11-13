@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
   "name": "Omair's Form Filler",
-  "version": "2.1.0",
-  "description": "Ultra-fast robot-speed form filler with 9-layer element detection, aggressive auto-scrolling, and unstoppable execution. Never pauses, never fails.",
+  "version": "2.2.0",
+  "description": "Perfect accuracy form filler with 9-layer element detection, input verification, and detailed logging. Visible speed mode for debugging.",
   "permissions": [
     "storage",
     "activeTab",
