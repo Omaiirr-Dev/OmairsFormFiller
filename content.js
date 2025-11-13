@@ -18,6 +18,9 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
     fillForm(msg.actions);
     sendResponse({ success: true });
   }
+  else if (msg.action === 'getRecordingState') {
+    sendResponse({ isRecording: isRecording, actionCount: actions.length });
+  }
   return true;
 });
 

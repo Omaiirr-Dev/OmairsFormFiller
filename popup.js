@@ -10,7 +10,23 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   loadProfiles();
   setupButtons();
+  checkRecordingState();
 });
+
+// Check if recording is active
+async function checkRecordingState() {
+  try {
+    const response = await chrome.tabs.sendMessage(currentTab.id, { action: 'getRecordingState' });
+
+    if (response.isRecording) {
+      document.getElementById('recordBtn').disabled = true;
+      document.getElementById('stopBtn').disabled = false;
+      document.getElementById('status').textContent = `Recording... (${response.actionCount} actions)`;
+    }
+  } catch (err) {
+    // Content script not loaded yet, ignore
+  }
+}
 
 // Setup button listeners
 function setupButtons() {
