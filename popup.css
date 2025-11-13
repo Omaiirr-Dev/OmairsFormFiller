@@ -148,12 +148,12 @@ h1 {
   color: var(--text-muted);
 }
 
-.action-selector {
-  font-size: 11px;
-  color: var(--text-muted);
+.action-label {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-primary);
   margin-bottom: 8px;
-  font-family: monospace;
-  word-break: break-all;
+  line-height: 1.4;
 }
 
 .action-value {

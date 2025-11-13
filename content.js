@@ -58,6 +58,7 @@ function recordClick(e) {
 
   const el = e.target;
   const selector = getSelector(el);
+  const label = findLabel(el);
 
   // Capture text content for dropdown options
   const textContent = el.innerText || el.textContent || '';
@@ -66,6 +67,7 @@ function recordClick(e) {
   actions.push({
     type: 'click',
     selector: selector,
+    label: label,  // Field label/title
     tagName: el.tagName,
     inputType: el.type,
     checked: el.checked,
@@ -82,6 +84,7 @@ function recordInput(e) {
 
   const el = e.target;
   const selector = getSelector(el);
+  const label = findLabel(el);
 
   // Get unique tracking ID for this element instance
   if (!elementTracker.has(el)) {
@@ -98,6 +101,7 @@ function recordInput(e) {
   const action = {
     type: 'input',
     selector: selector,
+    label: label,  // Field label/title
     elementId: elementId,  // Track element instance
     tagName: el.tagName,
     inputType: el.type,
@@ -119,6 +123,7 @@ function recordChange(e) {
 
   const el = e.target;
   const selector = getSelector(el);
+  const label = findLabel(el);
 
   // For SELECT elements, also capture the selected option text
   let displayText = el.value;
@@ -129,6 +134,7 @@ function recordChange(e) {
   actions.push({
     type: 'change',
     selector: selector,
+    label: label,  // Field label/title
     tagName: el.tagName,
     inputType: el.type,
     value: el.value,
@@ -138,6 +144,90 @@ function recordChange(e) {
   });
 
   flashElement(el);
+}
+
+// Find label/title for a form field
+function findLabel(el) {
+  // 1. Check aria-label
+  if (el.getAttribute('aria-label')) {
+    return el.getAttribute('aria-label').trim();
+  }
+
+  // 2. Check for <label> with matching 'for' attribute
+  if (el.id) {
+    const label = document.querySelector(`label[for="${el.id}"]`);
+    if (label) return label.textContent.trim();
+  }
+
+  // 3. Check if wrapped in a <label>
+  let parent = el.parentElement;
+  while (parent && parent !== document.body) {
+    if (parent.tagName === 'LABEL') {
+      return parent.textContent.replace(el.value || '', '').trim();
+    }
+    parent = parent.parentElement;
+  }
+
+  // 4. Look for nearby text elements (common in custom forms)
+  // Search siblings and parent siblings for text
+  const searchRadius = 3;
+  let current = el.parentElement;
+
+  for (let i = 0; i < searchRadius && current; i++) {
+    // Check previous siblings
+    const prevSibling = current.previousElementSibling;
+    if (prevSibling) {
+      const text = extractTextFromElement(prevSibling);
+      if (text && text.length > 0 && text.length < 100) {
+        return text;
+      }
+    }
+
+    // Check children of parent for labels
+    if (current.children.length > 0) {
+      for (const child of current.children) {
+        if (child === el || child.contains(el)) continue;
+
+        const text = extractTextFromElement(child);
+        if (text && text.length > 0 && text.length < 100) {
+          // Common label indicators
+          if (text.includes('?') || text.includes(':') ||
+              child.tagName === 'LABEL' || child.tagName === 'SPAN' ||
+              child.className?.includes('label') || child.className?.includes('title')) {
+            return text;
+          }
+        }
+      }
+    }
+
+    current = current.parentElement;
+  }
+
+  // 5. Fallback: placeholder or name
+  if (el.placeholder) return el.placeholder.trim();
+  if (el.name) return el.name.replace(/[-_]/g, ' ').trim();
+
+  return 'Unknown field';
+}
+
+// Extract clean text from element (avoiding nested inputs)
+function extractTextFromElement(el) {
+  if (!el) return '';
+
+  // Get direct text nodes only
+  let text = '';
+  for (const node of el.childNodes) {
+    if (node.nodeType === Node.TEXT_NODE) {
+      text += node.textContent;
+    }
+  }
+
+  // If no direct text, get all text but limit
+  if (!text.trim() && el.textContent) {
+    text = el.textContent;
+  }
+
+  return text.trim().substring(0, 100);
 }
 
 // Get unique selector for element - SIMPLIFIED like working form fillers

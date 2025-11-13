@@ -80,6 +80,7 @@ function showEditSection() {
     const displayValue = action.value || '';
     const actionType = action.type === 'input' ? 'Text Input' :
                       action.type === 'change' ? 'Dropdown/Select' : 'Click';
+    const label = action.label || 'Unknown field';
 
     return `
       <div class="action-item">
@@ -87,7 +88,7 @@ function showEditSection() {
           <span class="action-type">${actionType}</span>
           <span class="action-index">#${index + 1}</span>
         </div>
-        <div class="action-selector">${escapeHtml(action.selector.substring(0, 60))}${action.selector.length > 60 ? '...' : ''}</div>
+        <div class="action-label">${escapeHtml(label)}</div>
         ${isEditable ? `
           <input
             type="text"
