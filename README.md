@@ -6,10 +6,13 @@ A powerful Chrome extension for recording and replaying form interactions with p
 
 ### 🎯 Core Functionality
 - **Record Every Interaction**: Captures clicks, text inputs, dropdowns, radio buttons, checkboxes, and more
-- **Smart Replay**: Fills forms exactly as you recorded them
-- **Profile Management**: Save unlimited form-filling profiles
+- **Ultra-Robust Replay**: 9 fallback strategies with automatic retries for maximum reliability
+- **Profile Management**: Save unlimited form-filling profiles with comprehensive metadata
 - **Flexible Editing**: Edit any recorded action before replaying
-- **Visual Feedback**: See what's being recorded and replayed in real-time
+- **Visual Feedback**: Real-time on-screen indicators during recording and replay
+- **Smart Element Detection**: XPath + CSS selectors with intelligent waiting for dynamic content
+- **Auto-Scroll & Focus**: Automatically scrolls elements into view and focuses them
+- **Success Tracking**: See exactly which actions succeeded or failed during replay
 
 ### 🎨 User Interface
 - **Beautiful Dark Mode**: Easy on the eyes with a modern, sleek design
@@ -17,11 +20,27 @@ A powerful Chrome extension for recording and replaying form interactions with p
 - **Action Counter**: Track how many interactions you've recorded
 - **Profile Library**: Organized view of all your saved profiles
 
-### 🔧 Technical Features
-- **Smart Element Selection**: Multiple fallback strategies to find elements reliably
+### 🔧 Technical Features - Maximum Robustness
+- **9-Layer Element Detection**:
+  1. Direct CSS selector
+  2. XPath fallback
+  3. Name + type attributes
+  4. Element ID
+  5. Data attributes (data-testid, data-test, etc.)
+  6. Text content matching
+  7. Placeholder matching
+  8. Relaxed CSS (without positional selectors)
+  9. Partial selector matching
+
+- **Automatic Retry Logic**: Up to 3 retries with exponential backoff for network-delayed content
+- **Intelligent Waiting**: Waits up to 5 seconds for elements to become interactive
+- **Smart Selector Generation**: Filters out dynamic classes and uses stable identifiers
 - **Debounced Input**: Efficiently captures text input without duplicate actions
-- **Context Preservation**: Remembers form state including checked boxes and selected options
+- **Context Preservation**: Captures comprehensive metadata (position, attributes, classes)
+- **React/Vue Compatible**: Triggers native input setters for framework compatibility
 - **Safe Submission**: Prevents accidental form submissions during replay
+- **Element Validation**: Verifies tag names and input types before interaction
+- **Auto-Scroll**: Scrolls elements into center view before interaction
 
 ## Installation
 
@@ -207,12 +226,29 @@ Omair's Form Filler can capture and replay interactions with:
 - **Popup Interface**: Provides user-friendly controls and profile management
 
 ### Element Selection Strategy
-The extension uses multiple fallback strategies to locate elements:
-1. ID attribute (`#myInput`)
-2. Name attribute with type (`input[name="email"][type="text"]`)
-3. Data attributes (`[data-testid="submit"]`)
-4. CSS path with nth-of-type selectors
-5. Simplified selector without position specificity
+The extension uses a comprehensive 9-layer fallback system to locate elements reliably:
+
+**Recording Phase:**
+1. **ID-based** (`#uniqueId`) - Most stable if IDs don't change
+2. **Name + Type** (`input[name="email"][type="text"]`) - Common in forms
+3. **Data attributes** (`[data-testid="submit"]`) - Test automation friendly
+4. **ARIA labels** (`[aria-label="Submit"]`) - Accessibility attributes
+5. **Placeholders** (`[placeholder="Enter email"]`) - Input hints
+6. **Smart CSS path** - Filters dynamic classes, uses stable selectors only
+7. **XPath** - Full DOM path as ultimate fallback
+
+**Replay Phase (with retries):**
+1. Direct CSS selector
+2. XPath lookup
+3. Name + type combo
+4. Element ID only
+5. Any data-* attribute
+6. Text content matching (for buttons/labels)
+7. Placeholder attribute
+8. Relaxed CSS (removes nth-of-type)
+9. Partial selector (last component only)
+
+Each strategy validates the element type and structure before accepting it.
 
 ### Event Handling
 - **Click Events**: Captured with `addEventListener('click', ..., true)`

@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
   "name": "Omair's Form Filler",
-  "version": "1.0.0",
-  "description": "Record and replay form interactions with precision. Capture every click, input, and selection.",
+  "version": "2.0.0",
+  "description": "Record and replay form interactions with ultra-robust 9-layer element detection, automatic retries, and intelligent waiting for dynamic content.",
   "permissions": [
     "storage",
     "activeTab",
