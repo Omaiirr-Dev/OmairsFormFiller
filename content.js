@@ -3,6 +3,8 @@ console.log('Form Filler Ready');
 
 let isRecording = false;
 let actions = [];
+let elementTracker = new WeakMap(); // Track unique element instances
+let elementCounter = 0;
 
 // Listen for commands from popup
 chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
@@ -28,6 +30,8 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
 function startRecording() {
   isRecording = true;
   actions = [];
+  elementTracker = new WeakMap();
+  elementCounter = 0;
 
   document.addEventListener('click', recordClick, true);
   document.addEventListener('input', recordInput, true);
@@ -67,29 +71,39 @@ function recordClick(e) {
   flashElement(el);
 }
 
-// Record text input
+// Record text input - FIXED to prevent merging
 function recordInput(e) {
   if (!isRecording) return;
 
   const el = e.target;
   const selector = getSelector(el);
 
-  // Update existing action if same element
-  const existing = actions.findIndex(a =>
-    a.type === 'input' && a.selector === selector
-  );
+  // Get unique tracking ID for this element instance
+  if (!elementTracker.has(el)) {
+    elementTracker.set(el, ++elementCounter);
+  }
+  const elementId = elementTracker.get(el);
+
+  // Only update if LAST action was THIS EXACT element (debounce typing in same field)
+  const lastAction = actions[actions.length - 1];
+  const isLastActionSameElement = lastAction &&
+                                   lastAction.type === 'input' &&
+                                   lastAction.elementId === elementId;
 
   const action = {
     type: 'input',
     selector: selector,
+    elementId: elementId,  // Track element instance
     tagName: el.tagName,
     inputType: el.type,
     value: el.value
   };
 
-  if (existing >= 0) {
-    actions[existing] = action;
+  if (isLastActionSameElement) {
+    // Update the last action (debounce continuous typing)
+    actions[actions.length - 1] = action;
   } else {
+    // New element, add new action
     actions.push(action);
   }
 }
@@ -114,32 +128,55 @@ function recordChange(e) {
   flashElement(el);
 }
 
-// Get unique selector for element
+// Get unique selector for element - IMPROVED
 function getSelector(el) {
-  // Try ID first
+  // Try ID first (most reliable)
   if (el.id) return `#${el.id}`;
 
-  // Try name
+  // Try name with proper positioning
   if (el.name) {
     let sel = `${el.tagName.toLowerCase()}[name="${el.name}"]`;
     if (el.type) sel += `[type="${el.type}"]`;
 
-    // Add index if multiple with same name
+    // Check if multiple elements match this selector
     const matches = document.querySelectorAll(sel);
     if (matches.length > 1) {
+      // Find position among matches
       const idx = Array.from(matches).indexOf(el);
-      sel += `:nth-of-type(${idx + 1})`;
+      // Use :nth-child for better uniqueness
+      sel = `${sel}:nth-of-type(${idx + 1})`;
     }
     return sel;
   }
 
-  // Build path
-  let path = [];
+  // Build detailed DOM path as fallback
+  return buildDomPath(el);
+}
+
+// Build detailed DOM path
+function buildDomPath(el) {
+  const path = [];
   let current = el;
 
-  for (let i = 0; i < 5 && current && current.tagName; i++) {
+  // Go up to 10 levels for better uniqueness
+  for (let i = 0; i < 10 && current && current.tagName; i++) {
     let tag = current.tagName.toLowerCase();
 
+    // Add ID if present
+    if (current.id) {
+      path.unshift(`${tag}#${current.id}`);
+      break; // ID is unique, stop here
+    }
+
+    // Add class if present
+    if (current.className && typeof current.className === 'string') {
+      const classes = current.className.trim().split(/\s+/).slice(0, 2).join('.');
+      if (classes) {
+        tag += `.${classes}`;
+      }
+    }
+
+    // Add position among siblings of same tag
     if (current.parentElement) {
       const siblings = Array.from(current.parentElement.children)
         .filter(e => e.tagName === current.tagName);
