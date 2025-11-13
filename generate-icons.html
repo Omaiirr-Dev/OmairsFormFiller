@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Generate Icons</title>
+</head>
+<body>
+    <h1>Icon Generator for Omair's Form Filler</h1>
+    <p>Icons will be generated automatically...</p>
+    <canvas id="canvas16" width="16" height="16"></canvas>
+    <canvas id="canvas48" width="48" height="48"></canvas>
+    <canvas id="canvas128" width="128" height="128"></canvas>
+
+    <script>
+        function generateIcon(size) {
+            const canvas = document.getElementById(`canvas${size}`);
+            const ctx = canvas.getContext('2d');
+
+            // Background gradient
+            const gradient = ctx.createLinearGradient(0, 0, size, size);
+            gradient.addColorStop(0, '#6366f1');
+            gradient.addColorStop(1, '#8b5cf6');
+            ctx.fillStyle = gradient;
+            ctx.fillRect(0, 0, size, size);
+
+            // Draw a form-like icon
+            ctx.fillStyle = 'white';
+            const padding = size * 0.2;
+            const lineHeight = size * 0.15;
+            const gap = size * 0.08;
+
+            // Draw lines representing form fields
+            for (let i = 0; i < 3; i++) {
+                const y = padding + i * (lineHeight + gap);
+                ctx.fillRect(padding, y, size - padding * 2, lineHeight);
+            }
+
+            // Download link
+            canvas.toBlob((blob) => {
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `icon${size}.png`;
+                a.textContent = `Download icon${size}.png`;
+                a.style.display = 'block';
+                a.style.margin = '10px';
+                document.body.appendChild(a);
+            });
+        }
+
+        generateIcon(16);
+        generateIcon(48);
+        generateIcon(128);
+    </script>
+</body>
+</html>
