@@ -9,17 +9,19 @@ let actionCounter = 0;
 let recordingOverlay = null;
 let replayOverlay = null;
 
-// Configuration - Ultra-fast robot mode
+// Configuration - Visible speed with perfect accuracy
 const CONFIG = {
   MAX_RETRIES: 5,              // More retries for reliability
-  RETRY_DELAY: 100,            // Fast retry (was 500ms)
-  ELEMENT_WAIT_TIMEOUT: 1000,  // Short timeout (was 5000ms)
-  ELEMENT_WAIT_INTERVAL: 50,   // Fast check interval (was 100ms)
-  REPLAY_DELAY: 50,            // Blazing fast between actions (was 400ms)
-  HIGHLIGHT_DURATION: 300,     // Quick highlight (was 600ms)
-  SCROLL_BEHAVIOR: 'auto',     // Instant scroll (was 'smooth')
+  RETRY_DELAY: 300,            // Reasonable retry delay
+  ELEMENT_WAIT_TIMEOUT: 2000,  // Wait up to 2 seconds for elements
+  ELEMENT_WAIT_INTERVAL: 100,  // Check every 100ms
+  REPLAY_DELAY: 500,           // Visible delay between actions (3x human speed)
+  HIGHLIGHT_DURATION: 800,     // Longer highlight so you can see it
+  SCROLL_BEHAVIOR: 'smooth',   // Smooth scroll so you can see movement
   AGGRESSIVE_SCROLL: true,     // Force scroll even if element seems visible
-  SCROLL_PADDING: 100          // Extra scroll padding to ensure visibility
+  SCROLL_PADDING: 150,         // Extra scroll padding to ensure visibility
+  INPUT_SETTLE_DELAY: 100,     // Wait for input to settle after setting
+  VERIFY_INPUTS: true          // Verify that inputs were actually set
 };
 
 // Initialize the content script
@@ -580,32 +582,41 @@ function isElementValid(element, action) {
   return true;
 }
 
-// Wait for element to be ready for interaction (non-blocking, fast check)
+// Wait for element to be ready for interaction
 async function waitForElementReady(element) {
-  // Quick check only - don't block!
-  const maxAttempts = 10; // 10 attempts * 50ms = 500ms max
+  const startTime = Date.now();
 
-  for (let i = 0; i < maxAttempts; i++) {
+  while (Date.now() - startTime < CONFIG.ELEMENT_WAIT_TIMEOUT) {
     // Check if element is interactable
     if (!element.disabled &&
         element.offsetWidth > 0 &&
         element.offsetHeight > 0) {
-      return true;
+
+      // Extra check: is it actually visible?
+      const style = window.getComputedStyle(element);
+      if (style.display !== 'none' &&
+          style.visibility !== 'hidden' &&
+          style.opacity !== '0') {
+        console.log('✓ Element is ready');
+        return true;
+      }
     }
 
-    // Very short wait
+    // Wait before checking again
     await sleep(CONFIG.ELEMENT_WAIT_INTERVAL);
   }
 
-  // Don't fail - just continue anyway
-  console.log('⚡ Element not fully ready, continuing anyway...');
-  return true; // Always return true to never block
+  // Element not ready, but continue anyway with a warning
+  console.warn('⚠️ Element not ready after timeout, attempting anyway');
+  return false;
 }
 
-// Scroll element into view - AGGRESSIVE mode
+// Scroll element into view with proper waiting
 async function scrollToElement(element) {
   try {
-    // Force scroll even if element seems visible
+    console.log('📍 Scrolling to element...');
+
+    // Get current position
     const rect = element.getBoundingClientRect();
     const isInViewport = (
       rect.top >= 0 &&
@@ -614,14 +625,23 @@ async function scrollToElement(element) {
       rect.right <= (window.innerWidth || document.documentElement.clientWidth)
     );
 
+    console.log(`📍 Element in viewport: ${isInViewport}`);
+
     // Always scroll in aggressive mode, or if not in viewport
     if (CONFIG.AGGRESSIVE_SCROLL || !isInViewport) {
-      // Scroll with instant behavior
+      // Scroll element into view
       element.scrollIntoView({
         behavior: CONFIG.SCROLL_BEHAVIOR,
         block: 'center',
         inline: 'center'
       });
+
+      // Wait for smooth scroll to complete
+      if (CONFIG.SCROLL_BEHAVIOR === 'smooth') {
+        await sleep(300); // Wait for smooth scroll animation
+      } else {
+        await sleep(50);
+      }
 
       // Extra scroll to add padding
       if (CONFIG.SCROLL_PADDING > 0) {
@@ -629,90 +649,130 @@ async function scrollToElement(element) {
           top: -CONFIG.SCROLL_PADDING,
           behavior: CONFIG.SCROLL_BEHAVIOR
         });
+
+        // Wait for padding scroll
+        await sleep(CONFIG.SCROLL_BEHAVIOR === 'smooth' ? 200 : 50);
       }
 
-      // Small wait for scroll to complete (even with 'auto')
-      await sleep(30);
+      console.log('✓ Scroll complete');
+    } else {
+      console.log('✓ Element already in viewport');
     }
   } catch (error) {
+    console.warn('⚠️ Scroll error:', error.message);
     // Fallback for older browsers
     try {
       element.scrollIntoView(false);
-      await sleep(30);
+      await sleep(200);
     } catch (e) {
-      console.log('⚠️ Scroll failed, continuing anyway');
+      console.log('⚠️ Scroll fallback failed, continuing anyway');
     }
   }
 }
 
-// Enhanced form filling - ULTRA-FAST ROBOT MODE
+// Enhanced form filling with perfect accuracy
 async function fillForm(actions) {
   if (!actions || actions.length === 0) {
     console.log('No actions to replay');
     return;
   }
 
-  console.log('🚀 Starting ULTRA-FAST form fill with', actions.length, 'actions');
+  console.log('🎯 Starting form fill with', actions.length, 'actions (visible speed mode)');
+  console.log('Actions to replay:', actions);
   showReplayOverlay();
 
   let successCount = 0;
   let failCount = 0;
+  let skippedCount = 0;
 
   for (let i = 0; i < actions.length; i++) {
     const action = actions[i];
-    console.log(`⚡ Replaying action ${i + 1}/${actions.length}:`, action);
+    console.group(`📝 Action ${i + 1}/${actions.length}`);
+    console.log('Action details:', action);
+    console.log('Type:', action.type);
+    console.log('Selector:', action.selector);
+    console.log('Value:', action.value);
 
     try {
+      // Find element with detailed logging
+      console.log('🔍 Finding element...');
       const element = await findElement(action);
 
       if (!element) {
-        console.warn('❌ Element not found, trying next action');
+        console.error('❌ ELEMENT NOT FOUND!');
+        console.error('Tried selector:', action.selector);
+        console.error('Tried xpath:', action.xpath);
+        console.error('Element name:', action.elementName);
+        console.error('Element ID:', action.elementId);
         failCount++;
         updateReplayCounter(i + 1, actions.length, successCount, failCount);
-        continue; // Never stop - keep going!
+        console.groupEnd();
+        continue;
       }
 
-      // AGGRESSIVE scroll - don't wait
+      console.log('✓ Element found:', element);
+      console.log('Element tag:', element.tagName);
+      console.log('Element type:', element.type);
+      console.log('Element name:', element.name);
+
+      // Scroll to element
       await scrollToElement(element);
 
-      // Quick ready check - never block
-      await waitForElementReady(element);
+      // Wait for element to be ready
+      const isReady = await waitForElementReady(element);
+      if (!isReady) {
+        console.warn('⚠️ Element not ready, but attempting anyway');
+      }
 
-      // Highlight element (non-blocking)
+      // Highlight element so user can see it
       highlightElement(element, '#6366f1');
 
-      // Minimal delay for DOM to settle (was 400ms, now 50ms)
+      // Visible delay so user can see what's happening
+      console.log(`⏳ Waiting ${CONFIG.REPLAY_DELAY}ms before action...`);
       await sleep(CONFIG.REPLAY_DELAY);
 
-      // Replay the action - NEVER let this stop us
+      // Replay the action with verification
+      console.log('🎬 Executing action...');
       try {
         const success = await replayAction(element, action);
 
         if (success) {
-          successCount++;
-          console.log('✓ Success');
+          // Verify the action actually worked
+          const verified = await verifyAction(element, action);
+
+          if (verified) {
+            successCount++;
+            console.log('✅ SUCCESS - Action completed and verified');
+          } else {
+            console.warn('⚠️ Action executed but verification failed');
+            failCount++;
+          }
         } else {
           failCount++;
-          console.warn('⚠️ Failed but continuing');
+          console.error('❌ FAILED - Action returned false');
         }
       } catch (actionError) {
-        console.warn('⚠️ Action error, continuing anyway:', actionError.message);
+        console.error('❌ ACTION ERROR:', actionError);
+        console.error('Stack:', actionError.stack);
         failCount++;
       }
 
       updateReplayCounter(i + 1, actions.length, successCount, failCount);
 
-      // NO additional delays - blazing fast!
-
     } catch (error) {
-      console.error('❌ Error, but NEVER STOPPING:', error.message);
+      console.error('❌ CRITICAL ERROR:', error);
+      console.error('Stack:', error.stack);
       failCount++;
       updateReplayCounter(i + 1, actions.length, successCount, failCount);
-      // KEEP GOING NO MATTER WHAT
     }
+
+    console.groupEnd();
   }
 
-  console.log(`🏁 Form fill complete: ${successCount} success, ${failCount} failed`);
+  console.log(`🏁 Form fill complete!`);
+  console.log(`✅ Success: ${successCount}`);
+  console.log(`❌ Failed: ${failCount}`);
+  console.log(`📊 Success rate: ${((successCount / actions.length) * 100).toFixed(1)}%`);
 
   // Show completion message
   updateReplayStatus(successCount, failCount, actions.length);
@@ -720,15 +780,67 @@ async function fillForm(actions) {
   // Hide overlay after a delay
   setTimeout(() => {
     hideReplayOverlay();
-  }, 2000);
+  }, 3000);
 }
 
-// Replay a single action - ULTRA-FAST
+// Verify that an action actually worked
+async function verifyAction(element, action) {
+  if (!CONFIG.VERIFY_INPUTS) {
+    return true;
+  }
+
+  try {
+    switch (action.type) {
+      case 'input':
+        const actualValue = element.value;
+        const expectedValue = action.value;
+        const matches = actualValue === expectedValue;
+        console.log(`Verify input: "${actualValue}" === "${expectedValue}" ? ${matches}`);
+        return matches;
+
+      case 'change':
+        if (element.tagName === 'SELECT') {
+          const actualIndex = element.selectedIndex;
+          const expectedIndex = action.selectedIndex;
+          const matches = actualIndex === expectedIndex;
+          console.log(`Verify select: ${actualIndex} === ${expectedIndex} ? ${matches}`);
+          return matches;
+        } else if (element.type === 'checkbox' || element.type === 'radio') {
+          const actualChecked = element.checked;
+          const expectedChecked = action.checked;
+          const matches = actualChecked === expectedChecked;
+          console.log(`Verify checked: ${actualChecked} === ${expectedChecked} ? ${matches}`);
+          return matches;
+        }
+        return true;
+
+      case 'click':
+        if (element.type === 'checkbox' || element.type === 'radio') {
+          const actualChecked = element.checked;
+          const expectedChecked = action.checked;
+          const matches = actualChecked === expectedChecked;
+          console.log(`Verify click checked: ${actualChecked} === ${expectedChecked} ? ${matches}`);
+          return matches;
+        }
+        return true;
+
+      default:
+        return true;
+    }
+  } catch (error) {
+    console.error('Verification error:', error);
+    return false;
+  }
+}
+
+// Replay a single action with proper focus and timing
 async function replayAction(element, action) {
   try {
-    // Focus the element first (no wait)
+    // Focus the element first and wait for focus
     if (element.focus) {
+      console.log('Setting focus...');
       element.focus();
+      await sleep(50); // Small delay after focus
     }
 
     switch (action.type) {
@@ -755,28 +867,68 @@ async function replayAction(element, action) {
   }
 }
 
-// Replay input action - INSTANT
+// Replay input action with verification
 async function replayInputAction(element, action) {
+  console.log(`Setting input value to: "${action.value}"`);
+
   if (element.value === action.value) {
-    console.log('Input already has correct value');
+    console.log('✓ Input already has correct value');
     return true;
   }
 
-  // Set value directly - NO clearing delay
+  // Clear existing value first
+  element.value = '';
+
+  // Trigger React/Vue change detection for clearing
+  const nativeInputValueSetter = Object.getOwnPropertyDescriptor(
+    window.HTMLInputElement.prototype,
+    'value'
+  )?.set;
+
+  if (nativeInputValueSetter) {
+    nativeInputValueSetter.call(element, '');
+    element.dispatchEvent(new Event('input', { bubbles: true }));
+  }
+
+  // Small delay after clearing
+  await sleep(50);
+
+  // Set the new value
   element.value = action.value;
 
-  // Trigger React/Vue change detection FIRST (most important)
-  const nativeInputValueSetter = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, 'value')?.set;
+  // Trigger React/Vue change detection for new value
   if (nativeInputValueSetter) {
     nativeInputValueSetter.call(element, action.value);
   }
 
-  // Dispatch multiple events to trigger various listeners (all at once)
+  // Dispatch events in proper order
   element.dispatchEvent(new Event('input', { bubbles: true, cancelable: true }));
+  await sleep(20);
+
   element.dispatchEvent(new Event('change', { bubbles: true, cancelable: true }));
+  await sleep(20);
+
   element.dispatchEvent(new KeyboardEvent('keyup', { bubbles: true }));
+  await sleep(20);
+
+  // Final input event for frameworks
   element.dispatchEvent(new Event('input', { bubbles: true }));
 
+  // Wait for input to settle
+  if (CONFIG.INPUT_SETTLE_DELAY) {
+    await sleep(CONFIG.INPUT_SETTLE_DELAY);
+  }
+
+  // Verify the value was set
+  const finalValue = element.value;
+  console.log(`Final input value: "${finalValue}"`);
+
+  if (finalValue !== action.value) {
+    console.error(`❌ Input value mismatch! Expected: "${action.value}", Got: "${finalValue}"`);
+    return false;
+  }
+
+  console.log('✓ Input value set successfully');
   return true;
 }
 
