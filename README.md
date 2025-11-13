@@ -48,21 +48,16 @@ A powerful Chrome extension for recording and replaying form interactions with p
 
 1. **Download or Clone** this repository to your local machine
 
-2. **Generate Icons**:
-   - Open `generate-icons.html` in your browser
-   - Click the download links to save the three icon files
-   - Place `icon16.png`, `icon48.png`, and `icon128.png` in the `icons/` folder
-
-3. **Open Chrome Extensions**:
+2. **Open Chrome Extensions**:
    - Navigate to `chrome://extensions/`
    - Enable "Developer mode" (toggle in top-right corner)
 
-4. **Load the Extension**:
+3. **Load the Extension**:
    - Click "Load unpacked"
    - Select the `OmairsFormFiller` folder
    - The extension should now appear in your extensions list
 
-5. **Pin the Extension** (optional):
+4. **Pin the Extension** (optional):
    - Click the puzzle piece icon in Chrome toolbar
    - Find "Omair's Form Filler"
    - Click the pin icon to keep it visible
