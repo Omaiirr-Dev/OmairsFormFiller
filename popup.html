@@ -1,78 +1,29 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Omair's Form Filler</title>
+  <title>Form Filler</title>
   <link rel="stylesheet" href="popup.css">
 </head>
 <body>
   <div class="container">
-    <header>
-      <h1>Omair's Form Filler</h1>
-      <p class="tagline">Record. Save. Replay.</p>
-    </header>
+    <h1>Omair's Form Filler</h1>
 
-    <div class="status-bar">
-      <div class="status-indicator" id="statusIndicator">
-        <span class="status-dot"></span>
-        <span id="statusText">Ready</span>
-      </div>
+    <div class="status" id="status">Ready</div>
+
+    <div class="buttons">
+      <button id="recordBtn" class="btn btn-record">Record</button>
+      <button id="stopBtn" class="btn btn-stop" disabled>Stop</button>
     </div>
 
-    <div class="controls-section">
-      <button id="recordBtn" class="btn btn-record">
-        <span class="icon">⏺</span>
-        <span class="btn-text">Start Recording</span>
-      </button>
-
-      <button id="stopBtn" class="btn btn-stop" disabled>
-        <span class="icon">⏹</span>
-        <span class="btn-text">Stop Recording</span>
-      </button>
+    <div id="saveSection" class="save-section" style="display:none">
+      <input type="text" id="profileName" placeholder="Profile name...">
+      <button id="saveBtn" class="btn btn-save">Save</button>
     </div>
 
-    <div class="recording-info" id="recordingInfo" style="display: none;">
-      <div class="info-item">
-        <span class="info-label">Actions captured:</span>
-        <span class="info-value" id="actionCount">0</span>
-      </div>
-      <div class="info-item">
-        <span class="info-label">Current page:</span>
-        <span class="info-value" id="currentUrl">-</span>
-      </div>
-    </div>
-
-    <div class="save-section" id="saveSection" style="display: none;">
-      <input type="text" id="profileName" class="input-field" placeholder="Enter profile name...">
-      <button id="saveBtn" class="btn btn-save">
-        <span class="icon">💾</span>
-        <span class="btn-text">Save Profile</span>
-      </button>
-    </div>
-
-    <div class="profiles-section">
+    <div class="profiles">
       <h2>Saved Profiles</h2>
-      <div id="profilesList" class="profiles-list">
-        <p class="empty-state">No profiles saved yet. Start recording to create one!</p>
-      </div>
-    </div>
-
-    <div class="modal" id="editModal" style="display: none;">
-      <div class="modal-content">
-        <div class="modal-header">
-          <h2>Edit Profile</h2>
-          <button class="modal-close" id="closeModal">&times;</button>
-        </div>
-        <div class="modal-body">
-          <input type="text" id="editProfileName" class="input-field" placeholder="Profile name">
-          <div class="actions-editor" id="actionsEditor"></div>
-        </div>
-        <div class="modal-footer">
-          <button id="saveEditBtn" class="btn btn-primary">Save Changes</button>
-          <button id="cancelEditBtn" class="btn btn-secondary">Cancel</button>
-        </div>
-      </div>
+      <div id="profilesList"></div>
     </div>
   </div>
 
