@@ -3,8 +3,8 @@
 *.pem
 *.zip
 
-# Icons (will be generated)
-icons/*.png
+# Icons are now included in the repo for easy installation
+# icons/*.png
 
 # Node modules (if using build tools in future)
 node_modules/
