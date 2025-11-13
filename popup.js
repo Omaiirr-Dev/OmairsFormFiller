@@ -60,12 +60,55 @@ async function stopRecording() {
     document.getElementById('status').textContent = `Captured ${recordedActions.length} actions`;
 
     if (recordedActions.length > 0) {
+      showEditSection();
       document.getElementById('saveSection').style.display = 'block';
-      document.getElementById('profileName').focus();
     }
   } catch (err) {
     alert('Error stopping recording');
   }
+}
+
+// Show edit section with recorded actions
+function showEditSection() {
+  const editSection = document.getElementById('editSection');
+  const actionsList = document.getElementById('actionsList');
+
+  editSection.style.display = 'block';
+
+  actionsList.innerHTML = recordedActions.map((action, index) => {
+    const isEditable = action.type === 'input' || action.type === 'change';
+    const displayValue = action.value || '';
+    const actionType = action.type === 'input' ? 'Text Input' :
+                      action.type === 'change' ? 'Dropdown/Select' : 'Click';
+
+    return `
+      <div class="action-item">
+        <div class="action-header">
+          <span class="action-type">${actionType}</span>
+          <span class="action-index">#${index + 1}</span>
+        </div>
+        <div class="action-selector">${escapeHtml(action.selector.substring(0, 60))}${action.selector.length > 60 ? '...' : ''}</div>
+        ${isEditable ? `
+          <input
+            type="text"
+            class="action-value"
+            data-index="${index}"
+            value="${escapeHtml(displayValue)}"
+            placeholder="Enter value...">
+        ` : `
+          <div class="action-value-readonly">${action.checked !== undefined ? (action.checked ? 'Checked' : 'Unchecked') : 'Click action'}</div>
+        `}
+      </div>
+    `;
+  }).join('');
+
+  // Add event listeners to update values
+  actionsList.querySelectorAll('.action-value').forEach(input => {
+    input.addEventListener('input', (e) => {
+      const index = parseInt(e.target.dataset.index);
+      recordedActions[index].value = e.target.value;
+    });
+  });
 }
 
 // Save profile
@@ -90,11 +133,20 @@ async function saveProfile() {
   };
 
   const { profiles = [] } = await chrome.storage.local.get(['profiles']);
-  profiles.unshift(profile);
-  await chrome.storage.local.set({ profiles });
+
+  // If editing existing profile, remove the old one
+  let updatedProfiles = profiles;
+  if (window.editingProfileId) {
+    updatedProfiles = profiles.filter(p => p.id !== window.editingProfileId);
+    window.editingProfileId = null;
+  }
+
+  updatedProfiles.unshift(profile);
+  await chrome.storage.local.set({ profiles: updatedProfiles });
 
   document.getElementById('profileName').value = '';
   document.getElementById('saveSection').style.display = 'none';
+  document.getElementById('editSection').style.display = 'none';
   document.getElementById('status').textContent = 'Profile saved!';
 
   recordedActions = [];
@@ -117,6 +169,7 @@ async function loadProfiles() {
       <div class="profile-actions">${p.actions.length} actions</div>
       <div class="profile-buttons">
         <button class="btn-fill" data-id="${p.id}">Fill</button>
+        <button class="btn-edit" data-id="${p.id}">Edit</button>
         <button class="btn-delete" data-id="${p.id}">Delete</button>
       </div>
     </div>
@@ -127,9 +180,31 @@ async function loadProfiles() {
     btn.onclick = () => fillForm(btn.dataset.id);
   });
 
+  list.querySelectorAll('.btn-edit').forEach(btn => {
+    btn.onclick = () => editProfile(btn.dataset.id);
+  });
+
   list.querySelectorAll('.btn-delete').forEach(btn => {
     btn.onclick = () => deleteProfile(btn.dataset.id);
   });
+}
+
+// Edit profile
+async function editProfile(profileId) {
+  const { profiles = [] } = await chrome.storage.local.get(['profiles']);
+  const profile = profiles.find(p => p.id === profileId);
+
+  if (!profile) return;
+
+  recordedActions = JSON.parse(JSON.stringify(profile.actions)); // Deep copy
+  document.getElementById('profileName').value = profile.name;
+
+  showEditSection();
+  document.getElementById('saveSection').style.display = 'block';
+  document.getElementById('status').textContent = `Editing: ${profile.name}`;
+
+  // Delete old profile when saving edited version
+  window.editingProfileId = profileId;
 }
 
 // Fill form with profile
