@@ -9,6 +9,10 @@ let actionCounter = 0;
 let recordingOverlay = null;
 let replayOverlay = null;
 
+// Track elements during recording to prevent merging different inputs
+let recordingElementMap = new WeakMap();
+let recordingElementCounter = 0;
+
 // Configuration - Visible speed with perfect accuracy
 const CONFIG = {
   MAX_RETRIES: 5,              // More retries for reliability
@@ -60,6 +64,10 @@ function startRecording() {
   recordedActions = [];
   actionCounter = 0;
 
+  // Reset element tracking
+  recordingElementMap = new WeakMap();
+  recordingElementCounter = 0;
+
   console.log('Recording started');
   showRecordingOverlay();
 
@@ -78,6 +86,33 @@ function stopRecording() {
   isRecording = false;
 
   console.log('Recording stopped. Actions captured:', recordedActions.length);
+
+  // Validate selectors are unique
+  const selectorCounts = {};
+  recordedActions.forEach((action, index) => {
+    const key = `${action.type}:${action.selector}`;
+    if (!selectorCounts[key]) {
+      selectorCounts[key] = [];
+    }
+    selectorCounts[key].push(index);
+  });
+
+  // Warn about duplicate selectors
+  let hasDuplicates = false;
+  for (const [key, indices] of Object.entries(selectorCounts)) {
+    if (indices.length > 1) {
+      console.warn(`⚠️ Duplicate selector detected: ${key} used for actions:`, indices);
+      hasDuplicates = true;
+    }
+  }
+
+  if (hasDuplicates) {
+    console.warn('⚠️ Some actions have identical selectors. This might cause issues during replay.');
+    console.warn('Tip: Try adding IDs or data-testid attributes to your form elements for better reliability.');
+  } else {
+    console.log('✅ All selectors are unique - excellent!');
+  }
+
   hideRecordingOverlay();
 
   // Remove event listeners
@@ -86,6 +121,9 @@ function stopRecording() {
   document.removeEventListener('change', captureChange, true);
   document.removeEventListener('submit', captureSubmit, true);
   document.removeEventListener('focus', captureFocus, true);
+
+  // Clear element tracking
+  recordingElementMap = new WeakMap();
 
   return [...recordedActions];
 }
@@ -146,15 +184,22 @@ function captureInput(event) {
 
   const elementInfo = getElementInfo(element);
 
-  // Debounce rapid input events for the same element
+  // Get or assign a unique tracking ID for this specific element
+  if (!recordingElementMap.has(element)) {
+    recordingElementMap.set(element, ++recordingElementCounter);
+  }
+  const elementTrackingId = recordingElementMap.get(element);
+
+  // Debounce rapid input events for THE SAME EXACT element (not just same selector)
   const existingActionIndex = recordedActions.findIndex(
-    a => a.selector === elementInfo.selector && a.type === 'input'
+    a => a.elementTrackingId === elementTrackingId && a.type === 'input'
   );
 
   const action = {
     id: existingActionIndex >= 0 ? recordedActions[existingActionIndex].id : ++actionCounter,
     type: 'input',
     timestamp: Date.now(),
+    elementTrackingId: elementTrackingId, // Unique ID for this specific element instance
     selector: elementInfo.selector,
     xpath: elementInfo.xpath,
     elementType: element.tagName.toLowerCase(),
@@ -170,14 +215,15 @@ function captureInput(event) {
   };
 
   if (existingActionIndex >= 0) {
-    // Update existing action
+    // Update existing action (same element, new value)
     recordedActions[existingActionIndex] = action;
+    console.log('Updated input for element #' + elementTrackingId + ':', action);
   } else {
-    // Add new action
+    // Add new action (new element)
     recordedActions.push(action);
+    console.log('New input captured for element #' + elementTrackingId + ':', action);
   }
 
-  console.log('Captured input:', action);
   updateRecordingCounter();
 }
 
@@ -317,8 +363,16 @@ function getUniqueSelector(element) {
     const type = element.type ? `[type="${element.type}"]` : '';
     const selector = `${tagName}[name="${name}"]${type}`;
 
-    if (document.querySelectorAll(selector).length === 1) {
+    // Check if this selector is unique
+    const matches = document.querySelectorAll(selector);
+    if (matches.length === 1) {
       return selector;
+    } else if (matches.length > 1) {
+      // Multiple elements with same name - add nth-of-type
+      const index = Array.from(matches).indexOf(element);
+      if (index >= 0) {
+        return `${selector}:nth-of-type(${index + 1})`;
+      }
     }
   }
 
@@ -347,8 +401,15 @@ function getUniqueSelector(element) {
   if (element.placeholder) {
     const placeholder = CSS.escape(element.placeholder);
     const selector = `${element.tagName.toLowerCase()}[placeholder="${placeholder}"]`;
-    if (document.querySelectorAll(selector).length === 1) {
+    const matches = document.querySelectorAll(selector);
+    if (matches.length === 1) {
       return selector;
+    } else if (matches.length > 1) {
+      // Multiple elements with same placeholder - add nth-of-type
+      const index = Array.from(matches).indexOf(element);
+      if (index >= 0) {
+        return `${selector}:nth-of-type(${index + 1})`;
+      }
     }
   }
 
