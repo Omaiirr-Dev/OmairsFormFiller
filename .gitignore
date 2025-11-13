@@ -3,9 +3,6 @@
 *.pem
 *.zip
 
-# Icons (will be generated)
-icons/*.png
-
 # Node modules (if using build tools in future)
 node_modules/
 package-lock.json
