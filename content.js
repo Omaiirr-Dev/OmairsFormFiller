@@ -125,10 +125,20 @@ function recordChange(e) {
   const selector = getSelector(el);
   const label = findLabel(el);
 
-  // For SELECT elements, also capture the selected option text
+  // For SELECT elements, also capture the selected option text AND all available options
   let displayText = el.value;
-  if (el.tagName === 'SELECT' && el.selectedIndex >= 0 && el.options[el.selectedIndex]) {
-    displayText = el.options[el.selectedIndex].text;
+  let availableOptions = [];
+
+  if (el.tagName === 'SELECT') {
+    if (el.selectedIndex >= 0 && el.options[el.selectedIndex]) {
+      displayText = el.options[el.selectedIndex].text;
+    }
+
+    // Capture ALL options for later smart matching
+    availableOptions = Array.from(el.options).map(opt => ({
+      text: opt.text,
+      value: opt.value
+    }));
   }
 
   actions.push({
@@ -139,6 +149,7 @@ function recordChange(e) {
     inputType: el.type,
     value: el.value,
     displayText: displayText,  // Text content of selected option
+    availableOptions: availableOptions,  // All options for smart matching
     checked: el.checked,
     selectedIndex: el.selectedIndex
   });
@@ -322,11 +333,38 @@ async function fillForm(recordedActions) {
       }
       else if (action.type === 'change') {
         if (el.tagName === 'SELECT') {
-          // Real select element
-          el.value = action.value;
-          if (action.selectedIndex !== undefined) {
-            el.selectedIndex = action.selectedIndex;
+          // Real select element - SMART MATCHING for custom fields
+          const targetValue = action.value;
+          const targetText = action.displayText || targetValue;
+
+          // If custom field with available options, try to match by text first
+          if (action.isCustomField && action.availableOptions && action.availableOptions.length > 0) {
+            // Try to find option by matching text
+            let matched = false;
+            for (let i = 0; i < el.options.length; i++) {
+              const opt = el.options[i];
+              // Match by text (case insensitive) or exact value
+              if (opt.text.toLowerCase() === targetText.toLowerCase() ||
+                  opt.value === targetValue ||
+                  opt.text.toLowerCase().includes(targetText.toLowerCase())) {
+                el.selectedIndex = i;
+                matched = true;
+                break;
+              }
+            }
+
+            if (!matched) {
+              // Fallback to value
+              el.value = targetValue;
+            }
+          } else {
+            // Non-custom field: use exact value/index
+            el.value = targetValue;
+            if (action.selectedIndex !== undefined) {
+              el.selectedIndex = action.selectedIndex;
+            }
           }
+
           el.dispatchEvent(new Event('input', { bubbles: true }));
           el.dispatchEvent(new Event('change', { bubbles: true }));
         } else if (el.type === 'checkbox' || el.type === 'radio') {

@@ -389,6 +389,100 @@ h1 {
   line-height: 1.5;
 }
 
+/* Parsed Cells Section */
+.parsed-cells {
+  margin-bottom: 16px;
+}
+
+.parsed-cells h4 {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  margin-bottom: 8px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.cells-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-bottom: 16px;
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  overflow: hidden;
+}
+
+.cells-table thead {
+  background: var(--bg-primary);
+}
+
+.cells-table th {
+  padding: 8px 12px;
+  text-align: left;
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  border-bottom: 1px solid var(--border);
+}
+
+.cells-table td {
+  padding: 8px 12px;
+  font-size: 12px;
+  color: var(--text-secondary);
+  border-bottom: 1px solid var(--border);
+}
+
+.cells-table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+.cells-table tbody tr:hover {
+  background: rgba(99, 102, 241, 0.05);
+}
+
+.cell-badge {
+  display: inline-block;
+  background: rgba(99, 102, 241, 0.2);
+  color: var(--accent-bright);
+  padding: 3px 8px;
+  border-radius: 4px;
+  font-weight: 600;
+  font-size: 10px;
+}
+
+.cell-value {
+  color: var(--text-primary);
+  font-weight: 500;
+  font-family: 'SF Mono', Monaco, monospace;
+  font-size: 11px;
+}
+
+.cell-selector {
+  width: 100%;
+  padding: 6px 8px;
+  background: var(--bg-primary);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  color: var(--text-secondary);
+  font-size: 11px;
+  font-family: 'SF Mono', Monaco, monospace;
+  outline: none;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.cell-selector:hover {
+  border-color: var(--border-light);
+  background: var(--bg-secondary);
+}
+
+.cell-selector:focus {
+  border-color: var(--accent);
+}
+
 .script-section textarea {
   width: 100%;
   min-height: 70px;

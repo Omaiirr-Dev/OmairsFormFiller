@@ -34,6 +34,16 @@ function setupButtons() {
   document.getElementById('stopBtn').onclick = stopRecording;
   document.getElementById('renameBtn').onclick = renameProfile;
   document.getElementById('applyScriptBtn').onclick = applyScript;
+
+  // Auto-update table when user pastes data
+  const scriptInput = document.getElementById('scriptInput');
+  scriptInput.addEventListener('input', () => {
+    // Debounce to avoid too many updates
+    clearTimeout(scriptInput._updateTimeout);
+    scriptInput._updateTimeout = setTimeout(() => {
+      updateCustomFieldsTable();
+    }, 300);
+  });
 }
 
 // Start recording
@@ -207,31 +217,108 @@ function updateCustomFieldsTable() {
     return;
   }
 
-  const tableHTML = `
+  // Get parsed cells if data is pasted
+  const scriptText = document.getElementById('scriptInput')?.value.trim() || '';
+  const cells = scriptText ? parseDataCells(scriptText) : [];
+
+  let tableHTML = '';
+
+  // Show parsed cells if available
+  if (cells.length > 0) {
+    tableHTML += `
+      <div class="parsed-cells">
+        <h4>Pasted Data Cells</h4>
+        <table class="cells-table">
+          <thead>
+            <tr>
+              <th>Cell #</th>
+              <th>Value</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${cells.map((cell, idx) => `
+              <tr>
+                <td><span class="cell-badge">${idx + 1}</span></td>
+                <td class="cell-value">${escapeHtml(cell)}</td>
+              </tr>
+            `).join('')}
+          </tbody>
+        </table>
+      </div>
+    `;
+  }
+
+  // Show mapping table
+  tableHTML += `
+    <h4>Custom Field Mapping</h4>
     <table class="mapping-table">
       <thead>
         <tr>
-          <th>Position</th>
-          <th>Custom Field Name</th>
+          <th>Custom Field</th>
           <th>Goes To</th>
+          ${cells.length > 0 ? '<th>Select Cell</th>' : ''}
           <th>Current Value</th>
         </tr>
       </thead>
       <tbody>
-        ${customFields.map((field, index) => `
-          <tr>
-            <td><span class="position-badge">${index + 1}</span></td>
-            <td><strong>${escapeHtml(field.customLabel || `Custom ${index + 1}`)}</strong></td>
-            <td class="field-label">${escapeHtml(field.label || 'Unknown')}</td>
-            <td class="field-value">${escapeHtml(field.value || '(empty)')}</td>
-          </tr>
-        `).join('')}
+        ${customFields.map((field, index) => {
+          const fieldIndex = recordedActions.indexOf(field);
+          const mappedCell = field.mappedCellIndex !== undefined ? field.mappedCellIndex : index;
+
+          return `
+            <tr>
+              <td><strong>${escapeHtml(field.customLabel || `Custom ${index + 1}`)}</strong></td>
+              <td class="field-label">${escapeHtml(field.label || 'Unknown')}</td>
+              ${cells.length > 0 ? `
+                <td>
+                  <select class="cell-selector" data-field-index="${fieldIndex}">
+                    <option value="">-- None --</option>
+                    ${cells.map((cell, cellIdx) => `
+                      <option value="${cellIdx}" ${cellIdx === mappedCell ? 'selected' : ''}>
+                        Cell ${cellIdx + 1}: ${escapeHtml(cell.substring(0, 20))}${cell.length > 20 ? '...' : ''}
+                      </option>
+                    `).join('')}
+                  </select>
+                </td>
+              ` : ''}
+              <td class="field-value">${escapeHtml(field.value || '(empty)')}</td>
+            </tr>
+          `;
+        }).join('')}
       </tbody>
     </table>
-    <p class="table-help">Paste your data in the same order as the positions above. Position 1 data → Custom Field 1, Position 2 → Custom Field 2, etc.</p>
+    <p class="table-help">${cells.length > 0 ? 'Select which cell maps to each custom field, then click Apply.' : 'Paste data below to see cell mapping options.'}</p>
   `;
 
   tableContainer.innerHTML = tableHTML;
+
+  // Add event listeners to cell selectors
+  tableContainer.querySelectorAll('.cell-selector').forEach(select => {
+    select.addEventListener('change', (e) => {
+      const fieldIndex = parseInt(e.target.dataset.fieldIndex);
+      const cellIndex = e.target.value === '' ? undefined : parseInt(e.target.value);
+      recordedActions[fieldIndex].mappedCellIndex = cellIndex;
+      updateProfileActions();
+    });
+  });
+}
+
+// Parse pasted data into cells
+function parseDataCells(text) {
+  // Split by tabs first (spreadsheet format)
+  let cells = text.split('\t');
+
+  // If no tabs, split by multiple spaces
+  if (cells.length === 1) {
+    cells = text.split(/\s{2,}/);
+  }
+
+  // If still one cell, split by newlines
+  if (cells.length === 1) {
+    cells = text.split('\n');
+  }
+
+  return cells.map(c => c.trim()).filter(c => c);
 }
 
 // Rename current profile
@@ -260,7 +347,7 @@ async function renameProfile() {
   }
 }
 
-// Apply script data to fields
+// Apply script data to fields using manual mapping
 function applyScript() {
   const scriptText = document.getElementById('scriptInput').value.trim();
 
@@ -269,10 +356,10 @@ function applyScript() {
     return;
   }
 
-  // Split by tabs or multiple spaces (spreadsheet format)
-  const values = scriptText.split(/\t+|\s{2,}/).filter(v => v.trim());
+  // Parse into cells
+  const cells = parseDataCells(scriptText);
 
-  // Get only CUSTOM-MARKED editable fields (in order)
+  // Get only CUSTOM-MARKED editable fields
   const customFields = recordedActions.filter(a =>
     (a.type === 'input' || a.type === 'change') && a.isCustomField === true
   );
@@ -282,19 +369,32 @@ function applyScript() {
     return;
   }
 
-  // Map values to custom fields BY POSITION
+  // Apply values using MANUAL MAPPING
   let applied = 0;
   const mapping = [];
-  for (let i = 0; i < Math.min(values.length, customFields.length); i++) {
-    const fieldLabel = customFields[i].customLabel || `Custom ${i + 1}`;
-    const oldValue = customFields[i].value;
-    customFields[i].value = values[i];
-    applied++;
-    mapping.push(`${fieldLabel}: "${oldValue}" → "${values[i]}"`);
-  }
+
+  customFields.forEach((field, index) => {
+    const cellIndex = field.mappedCellIndex !== undefined ? field.mappedCellIndex : index;
+
+    if (cellIndex !== undefined && cellIndex < cells.length) {
+      const fieldLabel = field.customLabel || `Custom ${index + 1}`;
+      const oldValue = field.value;
+      const newValue = cells[cellIndex];
+
+      field.value = newValue;
+
+      // For dropdowns, also update displayText for smart matching
+      if (field.type === 'change' && field.tagName === 'SELECT') {
+        field.displayText = newValue;
+      }
+
+      applied++;
+      mapping.push(`${fieldLabel}: "${oldValue}" → "${newValue}" (Cell ${cellIndex + 1})`);
+    }
+  });
 
   // Update the profile with new values
-  if (window.currentProfileId) {
+  if (window.currentProfileId || window.editingProfileId) {
     updateProfileActions();
   }
 
@@ -305,8 +405,8 @@ function applyScript() {
   const statusMsg = `Applied ${applied}/${total} custom fields:\n${mapping.slice(0, 3).join('\n')}${mapping.length > 3 ? '\n...' : ''}`;
   document.getElementById('status').textContent = statusMsg;
 
-  // Clear input
-  document.getElementById('scriptInput').value = '';
+  // Keep input for reference
+  // document.getElementById('scriptInput').value = '';
 }
 
 // Update profile actions in storage
