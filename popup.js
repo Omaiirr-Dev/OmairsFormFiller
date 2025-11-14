@@ -32,7 +32,8 @@ async function checkRecordingState() {
 function setupButtons() {
   document.getElementById('recordBtn').onclick = startRecording;
   document.getElementById('stopBtn').onclick = stopRecording;
-  document.getElementById('saveBtn').onclick = saveProfile;
+  document.getElementById('renameBtn').onclick = renameProfile;
+  document.getElementById('applyScriptBtn').onclick = applyScript;
 }
 
 // Start recording
@@ -60,12 +61,46 @@ async function stopRecording() {
     document.getElementById('status').textContent = `Captured ${recordedActions.length} actions`;
 
     if (recordedActions.length > 0) {
+      // Auto-save with random name
+      const randomName = generateRandomName();
+      await autoSaveProfile(randomName);
+
+      // Show edit and script sections
       showEditSection();
+      document.getElementById('scriptSection').style.display = 'block';
       document.getElementById('saveSection').style.display = 'block';
+      document.getElementById('profileName').value = randomName;
     }
   } catch (err) {
     alert('Error stopping recording');
   }
+}
+
+// Generate random profile name
+function generateRandomName() {
+  const adjectives = ['Quick', 'Smart', 'Fast', 'Easy', 'Auto', 'New', 'Cool', 'Fresh'];
+  const nouns = ['Profile', 'Form', 'Setup', 'Fill', 'Data', 'Entry'];
+  const adj = adjectives[Math.floor(Math.random() * adjectives.length)];
+  const noun = nouns[Math.floor(Math.random() * nouns.length)];
+  const num = Math.floor(Math.random() * 1000);
+  return `${adj} ${noun} ${num}`;
+}
+
+// Auto-save profile
+async function autoSaveProfile(name) {
+  const profile = {
+    id: Date.now().toString(),
+    name: name,
+    actions: recordedActions,
+    created: Date.now()
+  };
+
+  const { profiles = [] } = await chrome.storage.local.get(['profiles']);
+  profiles.unshift(profile);
+  await chrome.storage.local.set({ profiles });
+
+  window.currentProfileId = profile.id;
+  loadProfiles();
 }
 
 // Show edit section with recorded actions
@@ -108,50 +143,84 @@ function showEditSection() {
     input.addEventListener('input', (e) => {
       const index = parseInt(e.target.dataset.index);
       recordedActions[index].value = e.target.value;
+      // Auto-update profile in storage
+      updateProfileActions();
     });
   });
 }
 
-// Save profile
-async function saveProfile() {
-  const name = document.getElementById('profileName').value.trim();
+// Rename current profile
+async function renameProfile() {
+  const newName = document.getElementById('profileName').value.trim();
 
-  if (!name) {
+  if (!newName) {
     alert('Enter a profile name');
     return;
   }
 
-  if (recordedActions.length === 0) {
-    alert('No actions to save');
+  const profileId = window.currentProfileId || window.editingProfileId;
+  if (!profileId) {
+    alert('No profile to rename');
     return;
   }
 
-  const profile = {
-    id: Date.now().toString(),
-    name: name,
-    actions: recordedActions,
-    created: Date.now()
-  };
-
   const { profiles = [] } = await chrome.storage.local.get(['profiles']);
+  const profile = profiles.find(p => p.id === profileId);
 
-  // If editing existing profile, remove the old one
-  let updatedProfiles = profiles;
-  if (window.editingProfileId) {
-    updatedProfiles = profiles.filter(p => p.id !== window.editingProfileId);
-    window.editingProfileId = null;
+  if (profile) {
+    profile.name = newName;
+    await chrome.storage.local.set({ profiles });
+    document.getElementById('status').textContent = 'Profile renamed!';
+    loadProfiles();
+  }
+}
+
+// Apply script data to fields
+function applyScript() {
+  const scriptText = document.getElementById('scriptInput').value.trim();
+
+  if (!scriptText) {
+    alert('Paste some data first');
+    return;
   }
 
-  updatedProfiles.unshift(profile);
-  await chrome.storage.local.set({ profiles: updatedProfiles });
+  // Split by tabs or multiple spaces (spreadsheet format)
+  const values = scriptText.split(/\t+|\s{2,}/).filter(v => v.trim());
 
-  document.getElementById('profileName').value = '';
-  document.getElementById('saveSection').style.display = 'none';
-  document.getElementById('editSection').style.display = 'none';
-  document.getElementById('status').textContent = 'Profile saved!';
+  // Get only editable actions (input and change types)
+  const editableActions = recordedActions.filter(a => a.type === 'input' || a.type === 'change');
 
-  recordedActions = [];
-  loadProfiles();
+  // Apply values to editable actions
+  let applied = 0;
+  for (let i = 0; i < Math.min(values.length, editableActions.length); i++) {
+    editableActions[i].value = values[i];
+    applied++;
+  }
+
+  // Update the profile with new values
+  if (window.currentProfileId) {
+    updateProfileActions();
+  }
+
+  // Refresh edit section
+  showEditSection();
+
+  document.getElementById('status').textContent = `Applied ${applied} values to fields`;
+  document.getElementById('scriptInput').value = '';
+}
+
+// Update profile actions in storage
+async function updateProfileActions() {
+  const profileId = window.currentProfileId || window.editingProfileId;
+  if (!profileId) return;
+
+  const { profiles = [] } = await chrome.storage.local.get(['profiles']);
+  const profile = profiles.find(p => p.id === profileId);
+
+  if (profile) {
+    profile.actions = recordedActions;
+    await chrome.storage.local.set({ profiles });
+  }
 }
 
 // Load saved profiles
@@ -201,10 +270,12 @@ async function editProfile(profileId) {
   document.getElementById('profileName').value = profile.name;
 
   showEditSection();
+  document.getElementById('scriptSection').style.display = 'block';
   document.getElementById('saveSection').style.display = 'block';
   document.getElementById('status').textContent = `Editing: ${profile.name}`;
 
-  // Delete old profile when saving edited version
+  // Set current profile ID for updates
+  window.currentProfileId = profileId;
   window.editingProfileId = profileId;
 }
 
