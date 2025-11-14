@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Form Filler</title>
+  <link rel="stylesheet" href="popup.css">
+</head>
+<body>
+  <div class="container">
+    <h1>Omair's Form Filler</h1>
+
+    <div class="status" id="status">Ready</div>
+
+    <div class="buttons">
+      <button id="recordBtn" class="btn btn-record">Record</button>
+      <button id="stopBtn" class="btn btn-stop" disabled>Stop</button>
+    </div>
+
+    <div id="editSection" class="edit-section" style="display:none">
+      <h2>Edit Actions</h2>
+      <div id="actionsList" class="actions-list"></div>
+    </div>
+
+    <div id="scriptSection" class="script-section" style="display:none">
+      <h2>Custom Field Mapping</h2>
+      <div id="customFieldsTable"></div>
+      <h3>Paste Data Here</h3>
+      <p class="script-help">Paste your data separated by tabs or spaces. Position matters!</p>
+      <textarea id="scriptInput" placeholder="Paste data (e.g., John Doe    john@email.com    Acme Corp)"></textarea>
+      <button id="applyScriptBtn" class="btn btn-apply">Apply to Custom Fields</button>
+    </div>
+
+    <div id="saveSection" class="save-section" style="display:none">
+      <input type="text" id="profileName" placeholder="Profile name (auto-saved)">
+      <button id="renameBtn" class="btn btn-primary">Change Name</button>
+    </div>
+
+    <div class="profiles">
+      <h2>Saved Profiles</h2>
+      <div id="profilesList"></div>
+    </div>
+  </div>
+
+  <script src="popup.js"></script>
+</body>
+</html>
