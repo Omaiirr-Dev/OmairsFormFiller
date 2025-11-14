@@ -1,55 +1,46 @@
-# Quick Installation Guide
+# Installation Guide
 
-## Step-by-Step Setup
+## Quick Install
 
-### 1. Load Extension in Chrome
+1. Download this extension folder
+2. Open Chrome: `chrome://extensions/`
+3. Enable "Developer mode" (top right toggle)
+4. Click "Load unpacked"
+5. Select the extension folder
+6. Done!
 
-1. Open Chrome and navigate to: `chrome://extensions/`
-2. Enable **"Developer mode"** using the toggle in the top-right corner
-3. Click **"Load unpacked"**
-4. Navigate to and select the `OmairsFormFiller` folder
-5. Click **"Select Folder"**
+## Files Included
 
-### 2. Verify Installation
+- `manifest.json` - Extension configuration
+- `background.js` - Service worker
+- `content.js` - Form interaction logic
+- `popup.html` - Extension UI
+- `popup.js` - UI logic
+- `popup.css` - Dark mode styling
+- `icons/` - Extension icons
 
-- The extension should now appear in your extensions list
-- You should see "Omair's Form Filler" with the current version
-- Click the puzzle piece icon in your Chrome toolbar
-- Pin the extension for easy access
+## Test It
 
-### 3. Test It Out
+1. Click the extension icon
+2. Click "Record"
+3. Fill out any form
+4. Click "Stop" (auto-saves)
+5. Refresh the page
+6. Click "Fill" to replay!
 
-1. Visit any website with a form (e.g., Google Forms)
-2. Click the extension icon
-3. Click "Start Recording"
-4. Fill out the form
-5. Click "Stop Recording"
-6. Save your profile
-7. Refresh the page
-8. Click "Fill Form" to see the magic!
+## Troubleshooting
 
-## Troubleshooting Installation
+**Extension won't load?**
+- Make sure all files are present
+- Check Chrome version (need 88+)
+- Try reloading: Click refresh icon on extension
 
-### Extension Not Loading
-**Problem**: Chrome won't load the extension
-**Solution**:
-- Check that `manifest.json` exists in the folder
-- Ensure all files are present (manifest.json, popup.html, popup.css, popup.js, content.js, background.js)
-- Verify icons are in the `icons/` folder
-- Try reloading Chrome
+**Not working on a page?**
+- Refresh the page after loading extension
+- Check browser console for errors
 
-### Developer Mode Not Available
-**Problem**: Can't enable Developer mode
-**Solution**:
-- This may be restricted by your organization
-- You'll need admin rights or permission to install extensions
+## Uninstall
 
-## What's Next?
-
-Check out [README.md](README.md) for:
-- Complete usage instructions
-- Tips and best practices
-- Troubleshooting guide
-- Feature documentation
-
-Enjoy automating your forms! 🚀
+1. Go to `chrome://extensions/`
+2. Find "Omair's Form Filler"
+3. Click "Remove"
