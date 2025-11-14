@@ -311,11 +311,11 @@ async function fillForm(recordedActions) {
 
       // Scroll to element quickly
       el.scrollIntoView({ behavior: 'smooth', block: 'center' });
-      await sleep(100);
+      await sleep(50);
 
       // Quick flash
       flashElement(el);
-      await sleep(80);
+      await sleep(40);
 
       // Perform action
       if (action.type === 'input') {
@@ -333,32 +333,26 @@ async function fillForm(recordedActions) {
       }
       else if (action.type === 'change') {
         if (el.tagName === 'SELECT') {
-          // Real select element - SMART MATCHING for custom fields
+          // Real select element - SMART MATCHING by text
           const targetValue = action.value;
           const targetText = action.displayText || targetValue;
 
-          // If custom field with available options, try to match by text first
-          if (action.isCustomField && action.availableOptions && action.availableOptions.length > 0) {
-            // Try to find option by matching text
-            let matched = false;
-            for (let i = 0; i < el.options.length; i++) {
-              const opt = el.options[i];
-              // Match by text (case insensitive) or exact value
-              if (opt.text.toLowerCase() === targetText.toLowerCase() ||
-                  opt.value === targetValue ||
-                  opt.text.toLowerCase().includes(targetText.toLowerCase())) {
-                el.selectedIndex = i;
-                matched = true;
-                break;
-              }
+          // Try to match by text first (case insensitive)
+          let matched = false;
+          for (let i = 0; i < el.options.length; i++) {
+            const opt = el.options[i];
+            // Match by text (case insensitive) or exact value
+            if (opt.text.toLowerCase() === targetText.toLowerCase() ||
+                opt.value === targetValue ||
+                opt.text.toLowerCase().includes(targetText.toLowerCase())) {
+              el.selectedIndex = i;
+              matched = true;
+              break;
             }
+          }
 
-            if (!matched) {
-              // Fallback to value
-              el.value = targetValue;
-            }
-          } else {
-            // Non-custom field: use exact value/index
+          if (!matched) {
+            // Fallback to value and index
             el.value = targetValue;
             if (action.selectedIndex !== undefined) {
               el.selectedIndex = action.selectedIndex;
@@ -373,7 +367,7 @@ async function fillForm(recordedActions) {
         } else {
           // Custom dropdown (div-based) - click it and try to select option
           el.click();
-          await sleep(100);
+          await sleep(60);
 
           // Try to find and click the option with matching text
           const searchText = action.displayText || action.value;
@@ -381,7 +375,7 @@ async function fillForm(recordedActions) {
             const option = findOptionByText(el, searchText);
             if (option) {
               option.click();
-              await sleep(50);
+              await sleep(30);
             } else {
               // Fallback: try setting value directly
               el.value = action.value;
@@ -392,7 +386,7 @@ async function fillForm(recordedActions) {
         }
       }
 
-      await sleep(120);
+      await sleep(60);
 
     } catch (err) {
       console.error('Error replaying action:', err);
@@ -434,7 +428,7 @@ function sleep(ms) {
 function flashElement(el) {
   const original = el.style.outline;
   el.style.outline = '3px solid #6366f1';
-  setTimeout(() => el.style.outline = original, 250);
+  setTimeout(() => el.style.outline = original, 150);
 }
 
 function showNotification(text, color) {
