@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
   "name": "Omair's Form Filler",
-  "version": "3.0.0",
-  "description": "Simple and fast form filler. Record once, replay anytime with auto-save and label detection.",
+  "version": "4.0.0",
+  "description": "Simple and fast form filler. Record once, replay anytime with auto-save.",
   "permissions": [
     "storage",
     "activeTab",

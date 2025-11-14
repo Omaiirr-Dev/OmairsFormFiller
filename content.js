@@ -125,10 +125,20 @@ function recordChange(e) {
   const selector = getSelector(el);
   const label = findLabel(el);
 
-  // For SELECT elements, also capture the selected option text
+  // For SELECT elements, also capture the selected option text AND all available options
   let displayText = el.value;
-  if (el.tagName === 'SELECT' && el.selectedIndex >= 0 && el.options[el.selectedIndex]) {
-    displayText = el.options[el.selectedIndex].text;
+  let availableOptions = [];
+
+  if (el.tagName === 'SELECT') {
+    if (el.selectedIndex >= 0 && el.options[el.selectedIndex]) {
+      displayText = el.options[el.selectedIndex].text;
+    }
+
+    // Capture ALL options for later smart matching
+    availableOptions = Array.from(el.options).map(opt => ({
+      text: opt.text,
+      value: opt.value
+    }));
   }
 
   actions.push({
@@ -139,6 +149,7 @@ function recordChange(e) {
     inputType: el.type,
     value: el.value,
     displayText: displayText,  // Text content of selected option
+    availableOptions: availableOptions,  // All options for smart matching
     checked: el.checked,
     selectedIndex: el.selectedIndex
   });
@@ -300,11 +311,11 @@ async function fillForm(recordedActions) {
 
       // Scroll to element quickly
       el.scrollIntoView({ behavior: 'smooth', block: 'center' });
-      await sleep(100);
+      await sleep(50);
 
       // Quick flash
       flashElement(el);
-      await sleep(80);
+      await sleep(40);
 
       // Perform action
       if (action.type === 'input') {
@@ -322,11 +333,32 @@ async function fillForm(recordedActions) {
       }
       else if (action.type === 'change') {
         if (el.tagName === 'SELECT') {
-          // Real select element
-          el.value = action.value;
-          if (action.selectedIndex !== undefined) {
-            el.selectedIndex = action.selectedIndex;
+          // Real select element - SMART MATCHING by text
+          const targetValue = action.value;
+          const targetText = action.displayText || targetValue;
+
+          // Try to match by text first (case insensitive)
+          let matched = false;
+          for (let i = 0; i < el.options.length; i++) {
+            const opt = el.options[i];
+            // Match by text (case insensitive) or exact value
+            if (opt.text.toLowerCase() === targetText.toLowerCase() ||
+                opt.value === targetValue ||
+                opt.text.toLowerCase().includes(targetText.toLowerCase())) {
+              el.selectedIndex = i;
+              matched = true;
+              break;
+            }
           }
+
+          if (!matched) {
+            // Fallback to value and index
+            el.value = targetValue;
+            if (action.selectedIndex !== undefined) {
+              el.selectedIndex = action.selectedIndex;
+            }
+          }
+
           el.dispatchEvent(new Event('input', { bubbles: true }));
           el.dispatchEvent(new Event('change', { bubbles: true }));
         } else if (el.type === 'checkbox' || el.type === 'radio') {
@@ -335,7 +367,7 @@ async function fillForm(recordedActions) {
         } else {
           // Custom dropdown (div-based) - click it and try to select option
           el.click();
-          await sleep(100);
+          await sleep(60);
 
           // Try to find and click the option with matching text
           const searchText = action.displayText || action.value;
@@ -343,7 +375,7 @@ async function fillForm(recordedActions) {
             const option = findOptionByText(el, searchText);
             if (option) {
               option.click();
-              await sleep(50);
+              await sleep(30);
             } else {
               // Fallback: try setting value directly
               el.value = action.value;
@@ -354,7 +386,7 @@ async function fillForm(recordedActions) {
         }
       }
 
-      await sleep(120);
+      await sleep(60);
 
     } catch (err) {
       console.error('Error replaying action:', err);
@@ -396,7 +428,7 @@ function sleep(ms) {
 function flashElement(el) {
   const original = el.style.outline;
   el.style.outline = '3px solid #6366f1';
-  setTimeout(() => el.style.outline = original, 250);
+  setTimeout(() => el.style.outline = original, 150);
 }
 
 function showNotification(text, color) {
