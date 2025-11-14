@@ -117,6 +117,7 @@ function showEditSection() {
                       action.type === 'change' ? 'Dropdown/Select' : 'Click';
     const label = action.label || 'Unknown field';
     const isCustom = action.isCustomField || false;
+    const customLabel = action.customLabel || '';
 
     return `
       <div class="action-item ${isCustom ? 'custom-field' : ''}">
@@ -129,6 +130,14 @@ function showEditSection() {
         </div>
         <div class="action-label">${escapeHtml(label)}</div>
         ${isEditable ? `
+          ${isCustom ? `
+            <input
+              type="text"
+              class="custom-field-label"
+              data-index="${index}"
+              value="${escapeHtml(customLabel)}"
+              placeholder="Custom field name (e.g., Name, Email, Company)">
+          ` : ''}
           <input
             type="text"
             class="action-value"
@@ -155,6 +164,18 @@ function showEditSection() {
     });
   });
 
+  // Add event listeners for custom field labels
+  actionsList.querySelectorAll('.custom-field-label').forEach(input => {
+    input.addEventListener('input', (e) => {
+      const index = parseInt(e.target.dataset.index);
+      recordedActions[index].customLabel = e.target.value;
+      // Auto-update profile in storage
+      updateProfileActions();
+      // Update mapping table
+      updateCustomFieldsTable();
+    });
+  });
+
   // Add event listeners to toggle custom field
   actionsList.querySelectorAll('.btn-toggle-custom').forEach(btn => {
     btn.addEventListener('click', (e) => {
@@ -164,8 +185,53 @@ function showEditSection() {
       updateProfileActions();
       // Refresh display
       showEditSection();
+      // Update mapping table
+      updateCustomFieldsTable();
     });
   });
+
+  // Update custom fields table
+  updateCustomFieldsTable();
+}
+
+// Update custom fields mapping table
+function updateCustomFieldsTable() {
+  const customFields = recordedActions.filter(a =>
+    (a.type === 'input' || a.type === 'change') && a.isCustomField === true
+  );
+
+  const tableContainer = document.getElementById('customFieldsTable');
+
+  if (customFields.length === 0) {
+    tableContainer.innerHTML = '<p class="no-custom-fields">No custom fields marked yet. Mark fields as "Custom" above to create a data template.</p>';
+    return;
+  }
+
+  const tableHTML = `
+    <table class="mapping-table">
+      <thead>
+        <tr>
+          <th>Position</th>
+          <th>Custom Field Name</th>
+          <th>Goes To</th>
+          <th>Current Value</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${customFields.map((field, index) => `
+          <tr>
+            <td><span class="position-badge">${index + 1}</span></td>
+            <td><strong>${escapeHtml(field.customLabel || `Custom ${index + 1}`)}</strong></td>
+            <td class="field-label">${escapeHtml(field.label || 'Unknown')}</td>
+            <td class="field-value">${escapeHtml(field.value || '(empty)')}</td>
+          </tr>
+        `).join('')}
+      </tbody>
+    </table>
+    <p class="table-help">Paste your data in the same order as the positions above. Position 1 data → Custom Field 1, Position 2 → Custom Field 2, etc.</p>
+  `;
+
+  tableContainer.innerHTML = tableHTML;
 }
 
 // Rename current profile
@@ -206,7 +272,7 @@ function applyScript() {
   // Split by tabs or multiple spaces (spreadsheet format)
   const values = scriptText.split(/\t+|\s{2,}/).filter(v => v.trim());
 
-  // Get only CUSTOM-MARKED editable fields
+  // Get only CUSTOM-MARKED editable fields (in order)
   const customFields = recordedActions.filter(a =>
     (a.type === 'input' || a.type === 'change') && a.isCustomField === true
   );
@@ -216,11 +282,15 @@ function applyScript() {
     return;
   }
 
-  // Apply values to custom fields only
+  // Map values to custom fields BY POSITION
   let applied = 0;
+  const mapping = [];
   for (let i = 0; i < Math.min(values.length, customFields.length); i++) {
+    const fieldLabel = customFields[i].customLabel || `Custom ${i + 1}`;
+    const oldValue = customFields[i].value;
     customFields[i].value = values[i];
     applied++;
+    mapping.push(`${fieldLabel}: "${oldValue}" → "${values[i]}"`);
   }
 
   // Update the profile with new values
@@ -228,11 +298,14 @@ function applyScript() {
     updateProfileActions();
   }
 
-  // Refresh edit section
+  // Refresh edit section and table
   showEditSection();
 
   const total = customFields.length;
-  document.getElementById('status').textContent = `Applied ${applied}/${total} custom fields. Generic fields unchanged.`;
+  const statusMsg = `Applied ${applied}/${total} custom fields:\n${mapping.slice(0, 3).join('\n')}${mapping.length > 3 ? '\n...' : ''}`;
+  document.getElementById('status').textContent = statusMsg;
+
+  // Clear input
   document.getElementById('scriptInput').value = '';
 }
 

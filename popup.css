@@ -157,21 +157,22 @@ h1 {
 .custom-badge {
   font-size: 9px;
   font-weight: 700;
-  padding: 2px 6px;
-  background: #f59e0b;
+  padding: 3px 8px;
+  background: linear-gradient(135deg, #f59e0b, #d97706);
   color: white;
-  border-radius: 3px;
+  border-radius: 4px;
   text-transform: uppercase;
   letter-spacing: 0.5px;
+  box-shadow: 0 2px 4px rgba(245, 158, 11, 0.3);
 }
 
 .generic-badge {
   font-size: 9px;
   font-weight: 700;
-  padding: 2px 6px;
+  padding: 3px 8px;
   background: var(--bg-hover);
   color: var(--text-muted);
-  border-radius: 3px;
+  border-radius: 4px;
   text-transform: uppercase;
   letter-spacing: 0.5px;
 }
@@ -188,6 +189,31 @@ h1 {
   color: var(--text-primary);
   margin-bottom: 8px;
   line-height: 1.4;
+}
+
+.custom-field-label {
+  width: 100%;
+  padding: 8px;
+  background: rgba(245, 158, 11, 0.1);
+  border: 2px solid #f59e0b;
+  border-radius: 4px;
+  color: #f59e0b;
+  font-size: 12px;
+  font-weight: 600;
+  outline: none;
+  transition: all 0.2s;
+  margin-bottom: 8px;
+}
+
+.custom-field-label:focus {
+  border-color: #d97706;
+  box-shadow: 0 0 0 2px rgba(245, 158, 11, 0.2);
+  background: rgba(245, 158, 11, 0.15);
+}
+
+.custom-field-label::placeholder {
+  color: rgba(245, 158, 11, 0.5);
+  font-weight: 500;
 }
 
 .action-value {
@@ -220,23 +246,24 @@ h1 {
 .btn-toggle-custom {
   width: 100%;
   margin-top: 8px;
-  padding: 6px 10px;
-  background: var(--bg-primary);
-  border: 1px solid var(--border);
-  border-radius: 4px;
-  color: var(--text-secondary);
+  padding: 8px 12px;
+  background: linear-gradient(135deg, rgba(245, 158, 11, 0.1), rgba(245, 158, 11, 0.05));
+  border: 2px solid #f59e0b;
+  border-radius: 6px;
+  color: #f59e0b;
   font-size: 11px;
-  font-weight: 600;
+  font-weight: 700;
   cursor: pointer;
   transition: all 0.2s;
   text-transform: uppercase;
-  letter-spacing: 0.5px;
+  letter-spacing: 0.8px;
 }
 
 .btn-toggle-custom:hover {
-  background: var(--bg-hover);
-  border-color: #f59e0b;
-  color: #f59e0b;
+  background: linear-gradient(135deg, #f59e0b, #d97706);
+  color: white;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 8px rgba(245, 158, 11, 0.3);
 }
 
 .script-section {
@@ -248,9 +275,16 @@ h1 {
 }
 
 .script-section h2 {
-  font-size: 14px;
+  font-size: 15px;
+  font-weight: 700;
+  margin-bottom: 12px;
+  color: var(--text-primary);
+}
+
+.script-section h3 {
+  font-size: 13px;
   font-weight: 600;
-  margin-bottom: 8px;
+  margin: 16px 0 8px 0;
   color: var(--text-secondary);
 }
 
@@ -259,6 +293,88 @@ h1 {
   color: var(--text-muted);
   margin-bottom: 10px;
   line-height: 1.4;
+}
+
+.no-custom-fields {
+  padding: 20px;
+  text-align: center;
+  color: var(--text-muted);
+  font-size: 13px;
+  font-style: italic;
+  background: rgba(245, 158, 11, 0.05);
+  border: 2px dashed rgba(245, 158, 11, 0.3);
+  border-radius: 6px;
+  margin-bottom: 16px;
+}
+
+.mapping-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-bottom: 12px;
+  background: var(--bg-tertiary);
+  border-radius: 6px;
+  overflow: hidden;
+}
+
+.mapping-table thead {
+  background: linear-gradient(135deg, rgba(245, 158, 11, 0.15), rgba(245, 158, 11, 0.1));
+}
+
+.mapping-table th {
+  padding: 10px 12px;
+  text-align: left;
+  font-size: 11px;
+  font-weight: 700;
+  color: #f59e0b;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  border-bottom: 2px solid #f59e0b;
+}
+
+.mapping-table td {
+  padding: 10px 12px;
+  font-size: 12px;
+  color: var(--text-primary);
+  border-bottom: 1px solid var(--border);
+}
+
+.mapping-table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+.mapping-table tbody tr:hover {
+  background: rgba(245, 158, 11, 0.05);
+}
+
+.position-badge {
+  display: inline-block;
+  background: linear-gradient(135deg, #f59e0b, #d97706);
+  color: white;
+  padding: 4px 10px;
+  border-radius: 12px;
+  font-weight: 700;
+  font-size: 11px;
+}
+
+.field-label {
+  color: var(--text-secondary);
+  font-style: italic;
+}
+
+.field-value {
+  color: var(--accent);
+  font-weight: 600;
+  font-family: monospace;
+}
+
+.table-help {
+  font-size: 11px;
+  color: var(--text-muted);
+  margin-bottom: 12px;
+  padding: 8px;
+  background: rgba(99, 102, 241, 0.05);
+  border-left: 3px solid var(--accent);
+  border-radius: 4px;
 }
 
 .script-section textarea {
@@ -321,13 +437,37 @@ h1 {
 
 .btn-primary {
   width: 100%;
-  background: var(--accent);
+  background: linear-gradient(135deg, var(--accent), #5558e3);
   color: white;
+  box-shadow: 0 2px 4px rgba(99, 102, 241, 0.3);
 }
 
 .btn-primary:hover {
-  background: var(--accent-hover);
+  background: linear-gradient(135deg, #5558e3, #4447d5);
   transform: translateY(-1px);
+  box-shadow: 0 4px 8px rgba(99, 102, 241, 0.4);
+}
+
+.btn-apply {
+  width: 100%;
+  background: linear-gradient(135deg, #10b981, #059669);
+  color: white;
+  padding: 12px;
+  border: none;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  box-shadow: 0 4px 8px rgba(16, 185, 129, 0.3);
+}
+
+.btn-apply:hover {
+  background: linear-gradient(135deg, #059669, #047857);
+  transform: translateY(-2px);
+  box-shadow: 0 6px 12px rgba(16, 185, 129, 0.4);
 }
 
 .profiles h2 {
@@ -384,52 +524,61 @@ h1 {
 
 .btn-fill {
   flex: 1;
-  padding: 6px 12px;
+  padding: 7px 14px;
   font-size: 12px;
-  font-weight: 600;
+  font-weight: 700;
   border-radius: 6px;
   border: none;
-  background: var(--accent);
+  background: linear-gradient(135deg, #10b981, #059669);
   color: white;
   cursor: pointer;
   transition: all 0.2s;
+  box-shadow: 0 2px 4px rgba(16, 185, 129, 0.2);
 }
 
 .btn-fill:hover {
-  background: var(--accent-hover);
+  background: linear-gradient(135deg, #059669, #047857);
+  transform: translateY(-1px);
+  box-shadow: 0 3px 6px rgba(16, 185, 129, 0.3);
 }
 
 .btn-edit {
-  padding: 6px 12px;
+  padding: 7px 14px;
   font-size: 12px;
-  font-weight: 600;
+  font-weight: 700;
   border-radius: 6px;
-  background: var(--bg-tertiary);
-  color: var(--text-primary);
-  border: 1px solid var(--border);
+  background: linear-gradient(135deg, rgba(99, 102, 241, 0.15), rgba(99, 102, 241, 0.1));
+  color: var(--accent);
+  border: 2px solid var(--accent);
   cursor: pointer;
   transition: all 0.2s;
 }
 
 .btn-edit:hover {
-  background: var(--bg-hover);
-  border-color: var(--accent);
+  background: linear-gradient(135deg, var(--accent), #5558e3);
+  color: white;
+  transform: translateY(-1px);
+  box-shadow: 0 3px 6px rgba(99, 102, 241, 0.3);
 }
 
 .btn-delete {
-  padding: 6px 12px;
+  padding: 7px 14px;
   font-size: 12px;
-  font-weight: 600;
+  font-weight: 700;
   border-radius: 6px;
   background: rgba(239, 68, 68, 0.1);
   color: var(--danger);
-  border: 1px solid rgba(239, 68, 68, 0.2);
+  border: 2px solid rgba(239, 68, 68, 0.3);
   cursor: pointer;
   transition: all 0.2s;
 }
 
 .btn-delete:hover {
-  background: rgba(239, 68, 68, 0.2);
+  background: linear-gradient(135deg, #ef4444, #dc2626);
+  color: white;
+  border-color: #dc2626;
+  transform: translateY(-1px);
+  box-shadow: 0 3px 6px rgba(239, 68, 68, 0.3);
 }
 
 /* Scrollbar */
