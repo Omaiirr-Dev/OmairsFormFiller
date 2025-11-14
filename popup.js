@@ -116,11 +116,15 @@ function showEditSection() {
     const actionType = action.type === 'input' ? 'Text Input' :
                       action.type === 'change' ? 'Dropdown/Select' : 'Click';
     const label = action.label || 'Unknown field';
+    const isCustom = action.isCustomField || false;
 
     return `
-      <div class="action-item">
+      <div class="action-item ${isCustom ? 'custom-field' : ''}">
         <div class="action-header">
-          <span class="action-type">${actionType}</span>
+          <div class="action-header-left">
+            <span class="action-type">${actionType}</span>
+            ${isCustom ? '<span class="custom-badge">CUSTOM</span>' : '<span class="generic-badge">GENERIC</span>'}
+          </div>
           <span class="action-index">#${index + 1}</span>
         </div>
         <div class="action-label">${escapeHtml(label)}</div>
@@ -131,6 +135,9 @@ function showEditSection() {
             data-index="${index}"
             value="${escapeHtml(displayValue)}"
             placeholder="Enter value...">
+          <button class="btn-toggle-custom" data-index="${index}">
+            ${isCustom ? '✓ Custom Field' : 'Mark as Custom'}
+          </button>
         ` : `
           <div class="action-value-readonly">${action.checked !== undefined ? (action.checked ? 'Checked' : 'Unchecked') : 'Click action'}</div>
         `}
@@ -145,6 +152,18 @@ function showEditSection() {
       recordedActions[index].value = e.target.value;
       // Auto-update profile in storage
       updateProfileActions();
+    });
+  });
+
+  // Add event listeners to toggle custom field
+  actionsList.querySelectorAll('.btn-toggle-custom').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      const index = parseInt(e.target.dataset.index);
+      recordedActions[index].isCustomField = !recordedActions[index].isCustomField;
+      // Auto-update profile in storage
+      updateProfileActions();
+      // Refresh display
+      showEditSection();
     });
   });
 }
@@ -187,13 +206,20 @@ function applyScript() {
   // Split by tabs or multiple spaces (spreadsheet format)
   const values = scriptText.split(/\t+|\s{2,}/).filter(v => v.trim());
 
-  // Get only editable actions (input and change types)
-  const editableActions = recordedActions.filter(a => a.type === 'input' || a.type === 'change');
+  // Get only CUSTOM-MARKED editable fields
+  const customFields = recordedActions.filter(a =>
+    (a.type === 'input' || a.type === 'change') && a.isCustomField === true
+  );
 
-  // Apply values to editable actions
+  if (customFields.length === 0) {
+    alert('No custom fields marked! Click "Mark as Custom" on fields you want to replace.');
+    return;
+  }
+
+  // Apply values to custom fields only
   let applied = 0;
-  for (let i = 0; i < Math.min(values.length, editableActions.length); i++) {
-    editableActions[i].value = values[i];
+  for (let i = 0; i < Math.min(values.length, customFields.length); i++) {
+    customFields[i].value = values[i];
     applied++;
   }
 
@@ -205,7 +231,8 @@ function applyScript() {
   // Refresh edit section
   showEditSection();
 
-  document.getElementById('status').textContent = `Applied ${applied} values to fields`;
+  const total = customFields.length;
+  document.getElementById('status').textContent = `Applied ${applied}/${total} custom fields. Generic fields unchanged.`;
   document.getElementById('scriptInput').value = '';
 }
 
