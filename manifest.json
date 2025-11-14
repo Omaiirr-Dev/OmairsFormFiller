@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
   "name": "Omair's Form Filler",
-  "version": "2.3.0",
-  "description": "Perfect accuracy form filler with unique element tracking, preventing text input merging. 9-layer detection, input verification, and detailed logging.",
+  "version": "3.0.0",
+  "description": "Simple and fast form filler. Record once, replay anytime with auto-save and label detection.",
   "permissions": [
     "storage",
     "activeTab",
