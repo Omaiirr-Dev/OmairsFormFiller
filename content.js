@@ -311,11 +311,11 @@ async function fillForm(recordedActions) {
 
       // Scroll to element quickly
       el.scrollIntoView({ behavior: 'smooth', block: 'center' });
-      await sleep(50);
+      await sleep(30);
 
       // Quick flash
       flashElement(el);
-      await sleep(40);
+      await sleep(25);
 
       // Perform action
       if (action.type === 'input') {
@@ -367,7 +367,7 @@ async function fillForm(recordedActions) {
         } else {
           // Custom dropdown (div-based) - click it and try to select option
           el.click();
-          await sleep(60);
+          await sleep(40);
 
           // Try to find and click the option with matching text
           const searchText = action.displayText || action.value;
@@ -375,7 +375,7 @@ async function fillForm(recordedActions) {
             const option = findOptionByText(el, searchText);
             if (option) {
               option.click();
-              await sleep(30);
+              await sleep(20);
             } else {
               // Fallback: try setting value directly
               el.value = action.value;
@@ -386,7 +386,7 @@ async function fillForm(recordedActions) {
         }
       }
 
-      await sleep(60);
+      await sleep(40);
 
     } catch (err) {
       console.error('Error replaying action:', err);
@@ -428,7 +428,7 @@ function sleep(ms) {
 function flashElement(el) {
   const original = el.style.outline;
   el.style.outline = '3px solid #6366f1';
-  setTimeout(() => el.style.outline = original, 150);
+  setTimeout(() => el.style.outline = original, 100);
 }
 
 function showNotification(text, color) {
